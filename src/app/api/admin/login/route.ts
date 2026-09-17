@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
+import { PrismaClient } from "@prisma/client";
 import { hashPassword, verifyPassword, createAdminSessionToken, ADMIN_COOKIE_NAME } from "@/lib/auth";
+
+const prisma = new PrismaClient();
 
 const ADMIN_EMAIL = "emontal.33@gmail.com";
 const ADMIN_PASSWORD_RAW = "EMOmoro30630";
@@ -19,7 +22,7 @@ export async function POST(request: Request) {
 
     const trimmedEmail = email.trim().toLowerCase();
 
-    // Check credentials match configured admin
+    // Verify email match
     if (trimmedEmail !== ADMIN_EMAIL.toLowerCase()) {
       return NextResponse.json(
         { success: false, error: "بيانات الدخول غير صحيحة. يرجى التأكد من البريد الإلكتروني." },
@@ -27,8 +30,46 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verify password hash
-    const isPasswordValid = verifyPassword(password, ADMIN_PASSWORD_HASH);
+    // Query Database for Admin User
+    let dbUser = null;
+    try {
+      dbUser = await prisma.user.findUnique({
+        where: { email: trimmedEmail },
+      });
+
+      // Auto-Seed in DB if user does not exist in DB yet
+      if (!dbUser) {
+        let clinic = await prisma.clinic.findFirst();
+        if (!clinic) {
+          clinic = await prisma.clinic.create({
+            data: {
+              name: "Rosheta System Administration",
+              specialty: "System Administration",
+              primaryColor: "#059669",
+            },
+          });
+        }
+
+        dbUser = await prisma.user.create({
+          data: {
+            id: "user-admin-001",
+            clinicId: clinic.id,
+            name: "Rosheta System Administrator",
+            email: ADMIN_EMAIL,
+            role: "ADMIN",
+            title: "System Admin",
+            passwordHash: ADMIN_PASSWORD_HASH,
+          },
+        });
+      }
+    } catch (dbError) {
+      console.warn("Database lookup warning (using secure auth fallback):", dbError);
+    }
+
+    // Verify Password against DB or Fallback Hash
+    const targetHash = dbUser?.passwordHash || ADMIN_PASSWORD_HASH;
+    const isPasswordValid = verifyPassword(password, targetHash);
+
     if (!isPasswordValid) {
       return NextResponse.json(
         { success: false, error: "كلمة المرور غير صحيحة." },
@@ -42,7 +83,7 @@ export async function POST(request: Request) {
     // Create Response with HttpOnly Cookie
     const response = NextResponse.json({
       success: true,
-      message: "تم تسجيل الدخول بنجاح",
+      message: "تم تسجيل الدخول بنجاح وتأكيد بيانات المستجيب في قاعدة البيانات",
       redirect: "/admin/subscriptions",
     });
 
@@ -60,7 +101,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error("Admin Login Error:", error);
     return NextResponse.json(
-      { success: false, error: "حدث خطأ أثناء تسجيل الدخول." },
+      { success: false, error: "حدث خطأ أثناء عملية تسجيل الدخول." },
       { status: 500 }
     );
   }

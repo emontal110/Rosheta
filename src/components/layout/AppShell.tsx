@@ -33,6 +33,17 @@ export function AppShell({ children }: AppShellProps) {
   const { selectedBranchId, setSelectedBranchId, items, aiInteractions } = usePrescriptionStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Standalone Layout for Admin Portal & Admin Login (No main app header, no sidebar, no bottom nav)
+  if (pathname?.startsWith("/admin")) {
+    return (
+      <div className="min-h-screen bg-[#070c1e] text-slate-100 flex flex-col antialiased selection:bg-emerald-500 selection:text-white dir-rtl">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8 bg-gradient-to-b from-[#070c1e] via-[#0b132b] to-[#0f172a]">
+          {children}
+        </main>
+      </div>
+    );
+  }
+
   const activeBranch = branches.find((b) => b.id === selectedBranchId) || branches[0];
 
   const navLinks = [

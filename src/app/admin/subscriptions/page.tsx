@@ -50,6 +50,14 @@ export default function AdminSubscriptionsPortal() {
   const [customDays, setCustomDays] = useState(365);
   const [showAddManualModal, setShowAddManualModal] = useState(false);
 
+  // Manual Form States (Must be declared at top level of component)
+  const [manualDoctor, setManualDoctor] = useState("");
+  const [manualClinic, setManualClinic] = useState("");
+  const [manualMachineId, setManualMachineId] = useState("");
+  const [manualPlanName, setManualPlanName] = useState("الاشتراك السنوي (VIP)");
+  const [manualPrice, setManualPrice] = useState(1600);
+  const [manualDuration, setManualDuration] = useState(365);
+
   // Check Authentication on Mount
   useEffect(() => {
     async function verifyAdminAuth() {
@@ -91,14 +99,6 @@ export default function AdminSubscriptionsPortal() {
   if (!isAuthenticated) {
     return null;
   }
-
-  // Manual Form States
-  const [manualDoctor, setManualDoctor] = useState("");
-  const [manualClinic, setManualClinic] = useState("");
-  const [manualMachineId, setManualMachineId] = useState("");
-  const [manualPlanName, setManualPlanName] = useState("الاشتراك السنوي (VIP)");
-  const [manualPrice, setManualPrice] = useState(1600);
-  const [manualDuration, setManualDuration] = useState(365);
 
   const filteredSubs = subscriptions.filter((sub) => {
     const matchesStatus = filterStatus === "ALL" || sub.status === filterStatus;

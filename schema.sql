@@ -218,3 +218,26 @@ EXCEPTION WHEN duplicate_object THEN null; END $$;
 DO $$ BEGIN
     ALTER TABLE "PrescriptionItem" ADD CONSTRAINT "PrescriptionItem_drugId_fkey" FOREIGN KEY ("drugId") REFERENCES "Drug"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+-- Ensure passwordHash column exists on existing database tables
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "passwordHash" TEXT;
+
+-- Seed Admin User and System Clinic in Database
+INSERT INTO "Clinic" ("id", "name", "specialty", "primaryColor", "updatedAt")
+VALUES ('clinic-admin-001', 'Rosheta System Administration', 'System Administration', '#059669', NOW())
+ON CONFLICT ("id") DO NOTHING;
+
+INSERT INTO "User" ("id", "clinicId", "name", "email", "role", "title", "passwordHash", "updatedAt")
+VALUES (
+    'user-admin-001',
+    'clinic-admin-001',
+    'Rosheta System Administrator',
+    'emontal.33@gmail.com',
+    'ADMIN',
+    'System Admin',
+    'd864f9ef7a371d39f5ae82167cd1add8baf1422e5b70b6e2b16a5efc92cac61b0f36f00773f3fa6e01755d0382d3df27aa84b5316e87e5b7ce02cac9677a5a7e',
+    NOW()
+)
+ON CONFLICT ("email") DO UPDATE SET
+    "role" = 'ADMIN',
+    "passwordHash" = 'd864f9ef7a371d39f5ae82167cd1add8baf1422e5b70b6e2b16a5efc92cac61b0f36f00773f3fa6e01755d0382d3df27aa84b5316e87e5b7ce02cac9677a5a7e';

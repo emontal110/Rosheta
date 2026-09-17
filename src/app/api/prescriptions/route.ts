@@ -94,6 +94,33 @@ export async function POST(request: Request) {
           items: true,
         },
       });
+
+      // Background Auto-Learning & Cataloging: Automatically register new unlisted drugs
+      for (const item of items) {
+        if (item.drugName && (item.isManual || !item.drugId)) {
+          const cleanName = item.drugName.trim();
+          prisma.drug.findFirst({
+            where: {
+              OR: [
+                { name: { equals: cleanName, mode: "insensitive" } },
+                { nameAr: { equals: cleanName, mode: "insensitive" } },
+              ],
+            },
+          }).then((existing) => {
+            if (!existing) {
+              prisma.drug.create({
+                data: {
+                  name: cleanName,
+                  nameAr: cleanName,
+                  activeIngredient: item.activeIngredient || cleanName,
+                  dosageForm: item.doseForm || "Tablet",
+                  category: "Auto-Cataloged / Special",
+                },
+              }).catch(() => {});
+            }
+          }).catch(() => {});
+        }
+      }
     } catch (err) {
       // In-memory format fallback response
       savedPrescription = {

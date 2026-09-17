@@ -10,23 +10,19 @@ echo       Rosheta Admin Subscriptions Control Portal
 echo ========================================================
 echo.
 
-echo [1/3] إغلاق جميع السيرفرات والعمليات المفتوحة سابقاً...
+echo [1/3] إغلاق جميع السيرفرات السابقة...
 taskkill /F /IM node.exe >nul 2>&1
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr :3000 ^| findstr LISTENING') do (
     taskkill /F /PID %%a >nul 2>&1
 )
 
-timeout /t 2 >nul
-
-echo [2/3] فتح بورتال لوحة التحكم في المتصفح...
-echo URL: http://localhost:3000/admin/subscriptions
-start "" "http://localhost:3000/admin/subscriptions"
-
-echo.
-echo [3/3] تشغيل سيرفر التفعيل والتحكم...
-echo ========================================================
+echo [2/3] بدء تشغيل السيرفر المحلي...
 echo.
 
+REM Launch browser in parallel after short delay for server initialization
+start "" cmd /c "timeout /t 5 >nul && start "" http://localhost:3000/admin/login"
+
+echo [3/3] جاري تشغيل سيرفر Next.js...
 call npm run dev
 
 pause

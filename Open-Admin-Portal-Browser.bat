@@ -5,16 +5,14 @@ color 0B
 
 cd /d "%~dp0"
 
-echo [1/2] إغلاق أي سيرفرات قديمة على البورت 3000...
+echo [1/2] إغلاق أي سيرفرات قديمة...
 taskkill /F /IM node.exe >nul 2>&1
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr :3000 ^| findstr LISTENING') do (
     taskkill /F /PID %%a >nul 2>&1
 )
 
-timeout /t 1 >nul
-
-echo [2/2] فتح بورتال التحكم في المتصفح وتأكيد التشغيل...
-start "" "http://localhost:3000/admin/subscriptions"
+echo [2/2] فتح بورتال تسجيل الدخول والتفعيل...
+start "" cmd /c "timeout /t 5 >nul && start "" http://localhost:3000/admin/login"
 
 call npm run dev
 

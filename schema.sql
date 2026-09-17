@@ -1,13 +1,20 @@
 -- PostgreSQL Schema DDL for Rosheta Medical Platform (Supabase Compatible)
 
--- CreateEnum
-CREATE TYPE "Role" AS ENUM ('DOCTOR', 'ASSISTANT', 'ADMIN');
+-- CreateEnum safely
+DO $$ BEGIN
+    CREATE TYPE "Role" AS ENUM ('DOCTOR', 'ASSISTANT', 'ADMIN');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
--- CreateEnum
-CREATE TYPE "PaperSize" AS ENUM ('A4', 'A5');
+DO $$ BEGIN
+    CREATE TYPE "PaperSize" AS ENUM ('A4', 'A5');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- CreateTable: Clinic
-CREATE TABLE "Clinic" (
+CREATE TABLE IF NOT EXISTS "Clinic" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "specialty" TEXT NOT NULL DEFAULT 'General Medicine',
@@ -25,7 +32,7 @@ CREATE TABLE "Clinic" (
 );
 
 -- CreateTable: Branch
-CREATE TABLE "Branch" (
+CREATE TABLE IF NOT EXISTS "Branch" (
     "id" TEXT NOT NULL,
     "clinicId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -41,7 +48,7 @@ CREATE TABLE "Branch" (
 );
 
 -- CreateTable: User
-CREATE TABLE "User" (
+CREATE TABLE IF NOT EXISTS "User" (
     "id" TEXT NOT NULL,
     "clinicId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -62,7 +69,7 @@ CREATE TABLE "User" (
 -- ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "passwordHash" TEXT;
 
 -- CreateTable: Patient
-CREATE TABLE "Patient" (
+CREATE TABLE IF NOT EXISTS "Patient" (
     "id" TEXT NOT NULL,
     "clinicId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -80,7 +87,7 @@ CREATE TABLE "Patient" (
 );
 
 -- CreateTable: Drug
-CREATE TABLE "Drug" (
+CREATE TABLE IF NOT EXISTS "Drug" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "nameAr" TEXT,
@@ -97,7 +104,7 @@ CREATE TABLE "Drug" (
 );
 
 -- CreateTable: Prescription
-CREATE TABLE "Prescription" (
+CREATE TABLE IF NOT EXISTS "Prescription" (
     "id" TEXT NOT NULL,
     "prescriptionNo" TEXT NOT NULL,
     "clinicId" TEXT NOT NULL,
@@ -116,7 +123,7 @@ CREATE TABLE "Prescription" (
 );
 
 -- CreateTable: PrescriptionItem
-CREATE TABLE "PrescriptionItem" (
+CREATE TABLE IF NOT EXISTS "PrescriptionItem" (
     "id" TEXT NOT NULL,
     "prescriptionId" TEXT NOT NULL,
     "drugId" TEXT,

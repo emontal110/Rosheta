@@ -95,30 +95,31 @@ export async function POST(request: Request) {
         },
       });
 
-      // Background Auto-Learning & Cataloging: Automatically register new unlisted drugs
+      // Auto-Learning Engine: Automatically register newly typed manual drugs into Cloud Drug Database
       for (const item of items) {
-        if (item.drugName && (item.isManual || !item.drugId)) {
+        if ((item.isManual || !item.drugId) && item.drugName && item.drugName.trim().length > 2) {
           const cleanName = item.drugName.trim();
-          prisma.drug.findFirst({
+          const existing = await prisma.drug.findFirst({
             where: {
               OR: [
                 { name: { equals: cleanName, mode: "insensitive" } },
                 { nameAr: { equals: cleanName, mode: "insensitive" } },
               ],
             },
-          }).then((existing) => {
-            if (!existing) {
-              prisma.drug.create({
-                data: {
-                  name: cleanName,
-                  nameAr: cleanName,
-                  activeIngredient: item.activeIngredient || cleanName,
-                  dosageForm: item.doseForm || "Tablet",
-                  category: "Auto-Cataloged / Special",
-                },
-              }).catch(() => {});
-            }
-          }).catch(() => {});
+          });
+
+          if (!existing) {
+            await prisma.drug.create({
+              data: {
+                name: cleanName,
+                nameAr: cleanName,
+                activeIngredient: item.activeIngredient || cleanName,
+                dosageForm: item.doseForm || "Tablet",
+                category: "مستحضر مضاف تلقائياً",
+                sourceOrigin: "Egyptian Bank",
+              } as any,
+            }).catch(() => {});
+          }
         }
       }
     } catch (err) {

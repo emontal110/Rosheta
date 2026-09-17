@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Crown,
   CheckCircle2,
@@ -25,10 +26,16 @@ import {
   Check,
   Shield,
   CreditCard,
+  LogOut,
+  Lock,
 } from "lucide-react";
 import { useSubscriptionStore, SubscriptionRecord } from "@/store/useSubscriptionStore";
 
 export default function AdminSubscriptionsPortal() {
+  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
   const {
     subscriptions,
     activateSubscription,
@@ -42,6 +49,48 @@ export default function AdminSubscriptionsPortal() {
   const [selectedSubForActivate, setSelectedSubForActivate] = useState<SubscriptionRecord | null>(null);
   const [customDays, setCustomDays] = useState(365);
   const [showAddManualModal, setShowAddManualModal] = useState(false);
+
+  // Check Authentication on Mount
+  useEffect(() => {
+    async function verifyAdminAuth() {
+      try {
+        const res = await fetch("/api/admin/check-auth");
+        const data = await res.json();
+        if (!res.ok || !data.authenticated) {
+          router.replace("/admin/login");
+        } else {
+          setIsAuthenticated(true);
+        }
+      } catch {
+        router.replace("/admin/login");
+      } finally {
+        setCheckingAuth(false);
+      }
+    }
+    verifyAdminAuth();
+  }, [router]);
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/admin/logout", { method: "POST" });
+      router.replace("/admin/login");
+    } catch {
+      router.replace("/admin/login");
+    }
+  };
+
+  if (checkingAuth) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center space-y-4">
+        <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
+        <p className="text-xs font-bold text-slate-400">جاري التحقق من أمان الجلسة والصلاحيات...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   // Manual Form States
   const [manualDoctor, setManualDoctor] = useState("");
@@ -145,6 +194,16 @@ export default function AdminSubscriptionsPortal() {
             <ArrowLeft className="w-4 h-4" />
             <span>العودة لصفحة الباقات</span>
           </Link>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-rose-500/10 hover:bg-rose-500 text-rose-300 hover:text-white text-xs font-bold border border-rose-500/30 transition-all cursor-pointer"
+            title="تسجيل الخروج الأمني"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>تسجيل الخروج</span>
+          </button>
         </div>
       </div>
 

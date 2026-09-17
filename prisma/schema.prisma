@@ -69,6 +69,7 @@ model User {
   syndicateId  String?        // رقم القيد بالنقابة
   phone        String?
   specialty    String?
+  passwordHash String?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 

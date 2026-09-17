@@ -51,11 +51,15 @@ CREATE TABLE "User" (
     "syndicateId" TEXT,
     "phone" TEXT,
     "specialty" TEXT,
+    "passwordHash" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
+
+-- Migration for existing database tables:
+-- ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "passwordHash" TEXT;
 
 -- CreateTable: Patient
 CREATE TABLE "Patient" (

@@ -1,17 +1,29 @@
 {
   "short_name": "Rosheta",
-  "name": "Rosheta (روشتة) Medical Prescription PWA",
+  "name": "Rosheta (روشتة) Medical Prescription Platform",
   "icons": [
     {
       "src": "/icon.svg",
       "type": "image/svg+xml",
       "sizes": "any",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192",
+      "purpose": "any"
     }
   ],
   "start_url": "/",
   "background_color": "#070c1e",
-  "theme_color": "#059669",
+  "theme_color": "#070c1e",
   "display": "standalone",
   "orientation": "portrait"
 }

@@ -9,37 +9,8 @@ export const metadata: Metadata = {
     "Next.js PWA Medical Prescription Application for Egyptian Human Clinics, Dental, Aesthetics, and Specialty Centers with 25,000+ Egyptian drug bank search, AI interaction assist, and A4/A5 print sharing.",
   manifest: "/manifest.json",
   icons: {
-    icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-    ],
-    shortcut: "/icon.svg",
-    apple: [
-      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
-      { url: "/icon.svg", type: "image/svg+xml" },
-    ],
-  },
-  openGraph: {
-    title: "Rosheta (روشتة) - منصة الروشتة الطبية الذكية",
-    description: "تطبيق روشتة لإدارة العيادات الطبية والبحث في دليل الأدوية المصرية وطباعة الروشتات الإلكترونية.",
-    siteName: "Rosheta Medical Platform",
-    images: [
-      {
-        url: "/icon-512.png",
-        width: 512,
-        height: 512,
-        alt: "Rosheta Medical App Logo",
-      },
-    ],
-    locale: "ar_EG",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Rosheta (روشتة)",
-    description: "منصة الروشتة الطبية الذكية للعيادات والمراكز الطبية في مصر",
-    images: ["/icon-512.png"],
+    icon: "/icon.svg",
+    apple: "/icon.svg",
   },
   other: {
     "mobile-web-app-capable": "yes",
@@ -80,4 +51,5 @@ export default function RootLayout({
       </body>
     </html>
   );
+}
 }

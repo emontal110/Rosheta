@@ -4,9 +4,10 @@ import { Providers } from "@/components/providers/Providers";
 import { AppShell } from "@/components/layout/AppShell";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://rosheta-iota.vercel.app"),
   title: "Rosheta (روشتة) - Egyptian Medical Prescription Platform",
   description:
-    "Next.js PWA Medical Prescription Application for Egyptian Human Clinics, Dental, Aesthetics, and Specialty Centers with 25,000+ Egyptian drug bank search, AI interaction assist, and A4/A5 print sharing.",
+    "Next.js PWA Medical Prescription Application for Egyptian Human Clinics, Dental, Aesthetics, and Specialty Centers with 43,500+ Egyptian drug bank search, AI interaction assist, and A4/A5 print sharing.",
   manifest: "/manifest.json",
   icons: {
     icon: [
@@ -22,14 +23,16 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Rosheta (روشتة) - منصة الروشتة الطبية الذكية",
-    description: "تطبيق روشتة لإدارة العيادات الطبية والبحث في دليل الأدوية المصرية وطباعة الروشتات الإلكترونية.",
+    description: "تطبيق روشتة لإدارة العيادات الطبية والبحث في دليل الأدوية المصرية وتفعيل الاشتراكات.",
+    url: "https://rosheta-iota.vercel.app",
     siteName: "Rosheta Medical Platform",
     images: [
       {
-        url: "/icon-512.png",
+        url: "https://rosheta-iota.vercel.app/icon-512.png",
         width: 512,
         height: 512,
         alt: "Rosheta Medical App Logo",
+        type: "image/png",
       },
     ],
     locale: "ar_EG",
@@ -39,7 +42,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Rosheta (روشتة)",
     description: "منصة الروشتة الطبية الذكية للعيادات والمراكز الطبية في مصر",
-    images: ["/icon-512.png"],
+    images: ["https://rosheta-iota.vercel.app/icon-512.png"],
   },
   other: {
     "mobile-web-app-capable": "yes",

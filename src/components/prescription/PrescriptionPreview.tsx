@@ -70,8 +70,8 @@ export function PrescriptionPreview({ onOpenShareModal, hideToolbar = false }: P
   // Helpers for checking visibility AND print toggles
   const shouldPrintAge = visibleFields.showAge && (printFields?.printAge ?? true);
   const shouldPrintGender = visibleFields.showGender && (printFields?.printGender ?? true);
-  const shouldPrintHeight = (visibleFields.showHeight ?? visibleFields.showHeightWeight ?? true) && (printFields?.printHeight ?? true);
-  const shouldPrintWeight = (visibleFields.showWeight ?? visibleFields.showHeightWeight ?? true) && (printFields?.printWeight ?? true);
+  const shouldPrintHeight = (visibleFields.showHeight ?? visibleFields.showHeightWeight ?? false) && (printFields?.printHeight ?? true);
+  const shouldPrintWeight = (visibleFields.showWeight ?? visibleFields.showHeightWeight ?? false) && (printFields?.printWeight ?? true);
   const shouldPrintBloodType = visibleFields.showBloodType && (printFields?.printBloodType ?? true);
   const shouldPrintDiagnosis = visibleFields.showDiagnosis && (printFields?.printDiagnosis ?? true);
   const shouldPrintAllergies = visibleFields.showAllergies && (printFields?.printAllergies ?? true);

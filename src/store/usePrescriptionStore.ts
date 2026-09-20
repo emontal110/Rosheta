@@ -211,28 +211,28 @@ const SAMPLE_INITIAL_ITEMS: PrescriptionItem[] = [
 ];
 
 const DEFAULT_VISIBLE_FIELDS: VisiblePatientFields = {
-  showAge: true,
-  showGender: true,
-  showHeight: true,
-  showWeight: true,
-  showHeightWeight: true,
-  showBloodType: true,
+  showAge: false,
+  showGender: false,
+  showHeight: false,
+  showWeight: false,
+  showHeightWeight: false,
+  showBloodType: false,
   showDiagnosis: true,
-  showMedicalHistory: true,
-  showAllergies: true,
+  showMedicalHistory: false,
+  showAllergies: false,
   showDate: true,
   showRxNo: true,
 };
 
 const DEFAULT_PRINT_FIELDS: PrintPatientFields = {
-  printAge: true,
-  printGender: true,
-  printHeight: true,
-  printWeight: true,
-  printBloodType: true,
+  printAge: false,
+  printGender: false,
+  printHeight: false,
+  printWeight: false,
+  printBloodType: false,
   printDiagnosis: true,
-  printMedicalHistory: true,
-  printAllergies: true,
+  printMedicalHistory: false,
+  printAllergies: false,
 };
 
 const INITIAL_SAVED_PRESCRIPTIONS: SavedPrescriptionRecord[] = [

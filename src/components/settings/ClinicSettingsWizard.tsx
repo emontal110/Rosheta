@@ -333,6 +333,16 @@ export function ClinicSettingsWizard() {
 
               {/* Section 3: Patient Data Page Field Visibility Controls (Organized into Professional Categories) */}
               <div className="space-y-5 pt-4 border-t border-slate-800">
+                <div className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/20 space-y-2">
+                  <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                    <User className="w-4 h-4 text-emerald-400" />
+                    تخصيص حقول بيانات المريض بالروشتة (Default & Custom Patient Fields)
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                    الوضع الافتراضي البسيط يظهر فقط <strong className="text-emerald-300">(اسم المريض - رقم الهاتف - التشخيص الطبي)</strong>. يمكنك تفعيل أو إخفاء أي حقول إضافية كـ <span className="text-slate-300">(السن، الوزن، الجنس، فصيلة الدم، التاريخ الطبي، الحساسية)</span> بنقرة واحدة وتظل المحفوظات محفوظة دائماً:
+                  </p>
+                </div>
+
                 <div>
                   <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2 border-b border-slate-800 pb-2.5">
                     <UserCheck className="w-4 h-4 text-emerald-400" />

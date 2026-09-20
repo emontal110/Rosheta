@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import {
   Search,
   Plus,
@@ -22,6 +23,7 @@ import {
   Activity,
   BookmarkPlus,
   CheckCircle2,
+  Settings,
 } from "lucide-react";
 import { usePrescriptionStore, PrescriptionItem } from "@/store/usePrescriptionStore";
 import { useClinicStore } from "@/store/useClinicStore";
@@ -299,7 +301,17 @@ export function PrescriptionBuilder() {
               <User className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-slate-100">بيانات وتاريخ المريض الطبي (Patient Vitals & Clinical Record)</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-sm text-slate-100">بيانات وتاريخ المريض الطبي (Patient Vitals)</h3>
+                <Link
+                  href="/settings"
+                  className="text-[10px] font-bold text-slate-400 hover:text-emerald-300 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 px-2 py-0.5 rounded-lg flex items-center gap-1 transition-all"
+                  title="الذهاب لصفحة الإعدادات لتخصيص حقول المريض (السن، الوزن، فصيلة الدم...)"
+                >
+                  <Settings className="w-3 h-3 text-emerald-400" />
+                  <span>تخصيص الحقول ⚙️</span>
+                </Link>
+              </div>
             </div>
           </div>
 

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { QRCodeSVG } from "qrcode.react";
 import { useClinicStore } from "@/store/useClinicStore";
 import { usePrescriptionStore } from "@/store/usePrescriptionStore";
 import { Printer, Share2, Download, Check, Sparkles, MapPin, Phone, Image as ImageIcon } from "lucide-react";
@@ -398,27 +397,25 @@ export function PrescriptionPreview({ onOpenShareModal, hideToolbar = false }: P
               <tfoot>
                 <tr>
                   <td className="pt-4 border-t-2 border-slate-200">
-                    <div className="flex items-end justify-between gap-4 text-xs">
-                      {/* Branch Address & Phone */}
-                      <div className="space-y-1 text-slate-600 text-[11px] text-right">
-                        <p className="font-bold text-slate-900">{activeBranch.nameAr || activeBranch.name}</p>
-                        <p>{activeBranch.address}</p>
-                        <p className="dir-ltr text-right">{activeBranch.phone}</p>
-                        <p className="text-[10px] text-slate-400 pt-1">{clinic.footerText}</p>
+                    <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+                      {/* Branch Address & Info */}
+                      <div className="space-y-1 text-slate-700 text-[11px] text-right">
+                        <p className="font-bold text-slate-900 text-xs">{activeBranch.nameAr || activeBranch.name}</p>
+                        <p className="text-slate-600 font-medium">{activeBranch.address}</p>
+                        {clinic.footerText && (
+                          <p className="text-[10px] text-slate-500 pt-0.5">{clinic.footerText}</p>
+                        )}
                       </div>
 
-                      {/* Dynamic QR Verification Code & Signature */}
-                      <div className="text-center shrink-0 flex flex-col items-center gap-1">
-                        <QRCodeSVG
-                          value={`${process.env.NEXT_PUBLIC_APP_URL || "https://rosheta.eg"}/verify/${prescriptionNo}`}
-                          size={60}
-                          level="M"
-                        />
-                        <span className="text-[9px] font-mono text-slate-400">مسح للتحقق والتحميل</span>
-                        <div className="mt-1 pt-1 border-t border-slate-300 w-24 text-[10px] font-bold text-slate-800">
-                          توقيع الطبيب
+                      {/* Properly Formatted Phone Number Box */}
+                      {activeBranch.phone && (
+                        <div className="text-left shrink-0 p-2 rounded-xl bg-slate-50 border border-slate-200">
+                          <p className="text-[10px] text-slate-400 font-bold mb-0.5">📞 للتواصل والاستفسارات:</p>
+                          <span dir="ltr" className="inline-block font-bold text-slate-900 font-mono text-xs tracking-wider">
+                            {activeBranch.phone}
+                          </span>
                         </div>
-                      </div>
+                      )}
                     </div>
                   </td>
                 </tr>

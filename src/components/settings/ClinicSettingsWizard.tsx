@@ -12,6 +12,7 @@ import {
   Palette,
   FileText,
   UserCheck,
+  User,
   Clock,
   Phone,
   Shield,

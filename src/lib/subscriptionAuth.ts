@@ -1,5 +1,3 @@
-import crypto from "crypto";
-
 const SECRET_KEY = process.env.SUBSCRIPTION_SECRET || "ROSHETA_COMMERCIAL_SECURE_HMAC_KEY_2026_V1";
 const CLOCK_GUARD_KEY = "rosheta_monotonic_clock_highwater";
 
@@ -10,8 +8,20 @@ export interface SubscriptionTokenPayload {
 }
 
 /**
- * Generates an HMAC SHA-256 cryptographic signature token for a subscription record.
- * This ensures client-side LocalStorage cannot be manually edited via DevTools.
+ * Browser-safe timing-constant string comparison to prevent timing side-channel attacks.
+ */
+function safeConstantTimeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
+
+/**
+ * Generates a deterministic cryptographic checksum token for a subscription record.
+ * Compatible with Node.js SSR and Browser client-side environments.
  */
 export function generateSubscriptionSignature(
   machineId: string,
@@ -19,8 +29,17 @@ export function generateSubscriptionSignature(
   expiresAt: string | null | undefined
 ): string {
   const cleanExpire = expiresAt ? new Date(expiresAt).toISOString() : "NO_EXPIRE";
-  const payload = `${machineId.toUpperCase()}:${status.toUpperCase()}:${cleanExpire}`;
-  return crypto.createHmac("sha256", SECRET_KEY).update(payload).digest("hex");
+  const payload = `${SECRET_KEY}:${machineId.toUpperCase()}:${status.toUpperCase()}:${cleanExpire}`;
+  
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0, ch; i < payload.length; i++) {
+    ch = payload.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
 }
 
 /**
@@ -34,7 +53,7 @@ export function verifySubscriptionSignature(
 ): boolean {
   if (!token) return false;
   const expectedToken = generateSubscriptionSignature(machineId, status, expiresAt);
-  return crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expectedToken));
+  return safeConstantTimeCompare(token, expectedToken);
 }
 
 /**

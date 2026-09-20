@@ -340,11 +340,11 @@ export default function AdminSubscriptionsPortal() {
                     <td className="p-4 space-y-0.5">
                       <p className="font-bold text-slate-100 flex items-center gap-1.5">
                         <User className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>{sub.doctorName || "دكتور غير محدد"}</span>
+                        <span>{sub.doctorName?.trim() || "بانتظار إضافة الاسم ⏳"}</span>
                       </p>
                       <p className="text-[11px] text-slate-400 flex items-center gap-1">
                         <Building2 className="w-3.5 h-3.5 text-slate-500" />
-                        <span>{sub.clinicName || "عيادة خاصة"}</span>
+                        <span>{sub.clinicName?.trim() || "لم تسجل العيادة بعد"}</span>
                       </p>
                     </td>
 

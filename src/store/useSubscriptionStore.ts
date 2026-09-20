@@ -142,70 +142,13 @@ export function getSubscriptionDetails(subscriptions: SubscriptionRecord[], mach
   };
 }
 
-const INITIAL_SUBSCRIPTIONS: SubscriptionRecord[] = [
-  {
-    id: "sub-demo-001",
-    planId: "annual_vip",
-    planName: "الاشتراك السنوي (VIP)",
-    price: 1600,
-    paymentMethod: "vodafone",
-    senderPhone: "01094085223",
-    transactionRef: "VF-98420195",
-    status: "ACTIVE",
-    machineId: "RSH-8492-E49E",
-    allowedMachineIds: [],
-    doctorName: "د. أحمد السيد",
-    clinicName: "عيادات الحياة الطبية",
-    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-    activatedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-    expiresAt: new Date(Date.now() + 335 * 24 * 60 * 60 * 1000).toISOString(),
-    durationDays: 365,
-    signatureToken: generateSubscriptionSignature(
-      "RSH-8492-E49E",
-      "ACTIVE",
-      new Date(Date.now() + 335 * 24 * 60 * 60 * 1000).toISOString()
-    ),
-  },
-  {
-    id: "sub-demo-002",
-    planId: "quarterly",
-    planName: "اشتراك 3 شهور",
-    price: 400,
-    paymentMethod: "instapay",
-    senderPhone: "01123456789",
-    transactionRef: "IP-7729104",
-    status: "PENDING",
-    machineId: "RSH-9921-A8D8",
-    allowedMachineIds: [],
-    doctorName: "د. مريم محمود",
-    clinicName: "مركز الشفاء الطبي",
-    createdAt: new Date().toISOString(),
-    durationDays: 90,
-  },
-  {
-    id: "sub-demo-003",
-    planId: "trial",
-    planName: "الاشتراك المجاني (تجريبي)",
-    price: 0,
-    paymentMethod: "vodafone",
-    senderPhone: "01012345678",
-    transactionRef: "TRIAL-FREE30",
-    status: "PENDING",
-    machineId: "RSH-5510-F301",
-    allowedMachineIds: [],
-    doctorName: "د. سامح فؤاد",
-    clinicName: "عيادة الأمل الطبية",
-    createdAt: new Date().toISOString(),
-    durationDays: 30,
-    isTrial: true,
-  },
-];
+const INITIAL_SUBSCRIPTIONS: SubscriptionRecord[] = [];
 
 export const useSubscriptionStore = create<SubscriptionStoreState>()(
   persist(
     (set, get) => ({
       subscriptions: INITIAL_SUBSCRIPTIONS,
-      activeSubscription: INITIAL_SUBSCRIPTIONS[0],
+      activeSubscription: null,
       machineId: generateMachineId(),
 
       submitSubscriptionRequest: (data) => {

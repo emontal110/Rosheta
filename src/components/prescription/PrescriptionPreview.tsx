@@ -66,15 +66,15 @@ export function PrescriptionPreview({ onOpenShareModal, hideToolbar = false }: P
 
   const isA5 = paperSize === "A5";
 
-  // Helpers for checking visibility AND print toggles
-  const shouldPrintAge = visibleFields.showAge && (printFields?.printAge ?? true);
-  const shouldPrintGender = visibleFields.showGender && (printFields?.printGender ?? true);
-  const shouldPrintHeight = (visibleFields.showHeight ?? visibleFields.showHeightWeight ?? false) && (printFields?.printHeight ?? true);
-  const shouldPrintWeight = (visibleFields.showWeight ?? visibleFields.showHeightWeight ?? false) && (printFields?.printWeight ?? true);
-  const shouldPrintBloodType = visibleFields.showBloodType && (printFields?.printBloodType ?? true);
-  const shouldPrintDiagnosis = visibleFields.showDiagnosis && (printFields?.printDiagnosis ?? true);
-  const shouldPrintAllergies = visibleFields.showAllergies && (printFields?.printAllergies ?? true);
-  const shouldPrintMedicalHistory = visibleFields.showMedicalHistory && (printFields?.printMedicalHistory ?? true);
+  // Helpers for checking visibility AND print toggles (safeguarded against hydration flash with mounted check)
+  const shouldPrintAge = mounted && visibleFields.showAge && (printFields?.printAge ?? true);
+  const shouldPrintGender = mounted && visibleFields.showGender && (printFields?.printGender ?? true);
+  const shouldPrintHeight = mounted && (visibleFields.showHeight ?? visibleFields.showHeightWeight ?? false) && (printFields?.printHeight ?? true);
+  const shouldPrintWeight = mounted && (visibleFields.showWeight ?? visibleFields.showHeightWeight ?? false) && (printFields?.printWeight ?? true);
+  const shouldPrintBloodType = mounted && visibleFields.showBloodType && (printFields?.printBloodType ?? true);
+  const shouldPrintDiagnosis = mounted && visibleFields.showDiagnosis && (printFields?.printDiagnosis ?? true);
+  const shouldPrintAllergies = mounted && visibleFields.showAllergies && (printFields?.printAllergies ?? true);
+  const shouldPrintMedicalHistory = mounted && visibleFields.showMedicalHistory && (printFields?.printMedicalHistory ?? true);
 
   // Helper to format drug name based on selected language mode
   const renderDrugName = (item: (typeof items)[0]) => {
@@ -393,46 +393,54 @@ export function PrescriptionPreview({ onOpenShareModal, hideToolbar = false }: P
 
       {/* Bottom Action Bar: Export & Print Controls placed directly below the prescription sheet */}
       {!hideToolbar && (
-        <div className="p-4 rounded-2xl bg-slate-900/95 border border-slate-800 no-print shadow-2xl backdrop-blur-md flex flex-wrap items-center justify-between gap-3 sticky bottom-4 z-30">
-          <div className="flex items-center gap-2 text-xs text-slate-300 font-bold">
-            <Sparkles className="w-4 h-4 text-emerald-400" />
-            <span>خيارات حفظ ومعاينة الروشتة:</span>
+        <div className="max-w-2xl mx-auto w-full p-4 rounded-3xl bg-slate-900/95 border border-slate-800 no-print shadow-2xl backdrop-blur-md space-y-3 sticky bottom-4 z-30">
+          <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+            <div className="flex items-center gap-2 text-xs text-slate-300 font-bold">
+              <Sparkles className="w-4 h-4 text-emerald-400" />
+              <span>خيارات حفظ ومعاينة الروشتة:</span>
+            </div>
+            <span className="text-[10px] text-slate-400 font-semibold bg-slate-800 px-2 py-0.5 rounded-md border border-slate-700">
+              تصدير وطباعة
+            </span>
           </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-2.5">
-            {/* 1. Save as PNG Image */}
-            <button
-              type="button"
-              onClick={handleExportPngImage}
-              disabled={isExportingImage}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 text-slate-200 border border-slate-700 text-xs font-semibold hover:bg-slate-700 hover:text-white transition-all disabled:opacity-50 shadow-sm"
-              title="تنزيل الروشتة كصورة عالية الجودة"
-            >
-              <ImageIcon className="w-4 h-4 text-cyan-400" />
-              <span>{isExportingImage ? "جاري التجهيز..." : "حفظ كـ صورة PNG"}</span>
-            </button>
+          <div className="space-y-2.5">
+            {/* Row 1: Save PNG + Print Only side by side */}
+            <div className="grid grid-cols-2 gap-2.5">
+              {/* 1. Save as PNG Image */}
+              <button
+                type="button"
+                onClick={handleExportPngImage}
+                disabled={isExportingImage}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 text-slate-200 border border-slate-700 text-xs font-bold hover:bg-slate-700 hover:text-white transition-all disabled:opacity-50 shadow-sm"
+                title="تنزيل الروشتة كصورة عالية الجودة"
+              >
+                <ImageIcon className="w-4 h-4 text-cyan-400 shrink-0" />
+                <span>{isExportingImage ? "جاري التجهيز..." : "حفظ كـ صورة PNG"}</span>
+              </button>
 
-            {/* 2. Share via WhatsApp */}
+              {/* 2. Print Only */}
+              <button
+                type="button"
+                onClick={handlePrint}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white text-xs font-bold shadow-lg shadow-emerald-900/40 hover:brightness-110 active:scale-95 transition-all"
+              >
+                <Printer className="w-4 h-4 shrink-0" />
+                <span>طباعة الروشتة فقط</span>
+              </button>
+            </div>
+
+            {/* Row 2: WhatsApp Share underneath them */}
             {onOpenShareModal && (
               <button
                 type="button"
                 onClick={onOpenShareModal}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-semibold hover:bg-emerald-500/20 transition-all shadow-sm"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-bold hover:bg-emerald-500/20 transition-all shadow-sm"
               >
-                <Share2 className="w-4 h-4" />
+                <Share2 className="w-4 h-4 shrink-0" />
                 <span>مشاركة عبر الواتساب (PDF / PNG)</span>
               </button>
             )}
-
-            {/* 3. Print Only */}
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white text-xs font-bold shadow-lg shadow-emerald-900/40 hover:brightness-110 active:scale-95 transition-all"
-            >
-              <Printer className="w-4 h-4" />
-              <span>طباعة الروشتة فقط</span>
-            </button>
           </div>
         </div>
       )}

@@ -25,6 +25,9 @@ import {
 import { useClinicStore, BranchInfo } from "@/store/useClinicStore";
 import { usePrescriptionStore } from "@/store/usePrescriptionStore";
 import { PrescriptionPreview } from "../prescription/PrescriptionPreview";
+import { getLocalStorageUsage, smartPurgeCache, CacheStorageInfo } from "@/lib/CacheManager";
+import { registerBiometricCredential, isBiometricEnabled, setBiometricEnabled } from "@/lib/biometricAuth";
+import { RefreshCw, Zap, HardDrive, CheckCircle2, Fingerprint } from "lucide-react";
 
 const COLOR_PRESETS = [
   { name: "Emerald Medical", hex: "#059669" },
@@ -49,7 +52,22 @@ export function ClinicSettingsWizard() {
   const { clinic, updateClinic, branches, addBranch, updateBranch, deleteBranch, setDefaultBranch } = useClinicStore();
   const { visibleFields, toggleVisibleField } = usePrescriptionStore();
 
-  const [activeTab, setActiveTab] = useState<"profile" | "branches">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "branches" | "cache">("profile");
+  const [cacheInfo, setCacheInfo] = useState<CacheStorageInfo>(getLocalStorageUsage());
+  const [isCleaning, setIsCleaning] = useState(false);
+  const [cleanSuccessMsg, setCleanSuccessMsg] = useState<string | null>(null);
+
+  const handleCleanCache = async () => {
+    setIsCleaning(true);
+    setCleanSuccessMsg(null);
+    const res = await smartPurgeCache();
+    setIsCleaning(false);
+    if (res.success) {
+      setCacheInfo(getLocalStorageUsage());
+      setCleanSuccessMsg(`تم تنظيف الذاكرة المؤقتة بنجاح وتوفير ${res.freedFormatted}!`);
+      setTimeout(() => setCleanSuccessMsg(null), 5000);
+    }
+  };
 
   // New Branch Form Local State
   const [newBranchName, setNewBranchName] = useState("");
@@ -129,6 +147,17 @@ export function ClinicSettingsWizard() {
           >
             إدارة الفروع ({branches.length})
           </button>
+          <button
+            onClick={() => setActiveTab("cache")}
+            className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+              activeTab === "cache"
+                ? "bg-emerald-600 text-white shadow-md"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-400" />
+            <span>تنظيف الكاش والذاكرة 🧹</span>
+          </button>
         </div>
       </div>
 
@@ -195,6 +224,53 @@ export function ClinicSettingsWizard() {
                       onChange={(e) => updateClinic({ syndicateId: e.target.value })}
                       className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-xs font-bold text-slate-100 focus:outline-none focus:border-emerald-500"
                     />
+                  </div>
+
+                  {/* Fingerprint / Face ID Biometric Security Setup Card */}
+                  <div className="md:col-span-2 p-4 rounded-2xl bg-slate-950 border border-emerald-500/25 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-200 flex items-center gap-2">
+                        <Fingerprint className="w-5 h-5 text-emerald-400" />
+                        <span>تسجيل الدخول ببصمة الأصبع / Touch ID / Face ID:</span>
+                      </span>
+                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${isBiometricEnabled() ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" : "bg-slate-800 text-slate-400 border-slate-700"}`}>
+                        {isBiometricEnabled() ? "البصمة مفعّلة ✅" : "غير مفعّلة 🔒"}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                      يمكنك تسجيل بصمة أصبعك أو وجهك بلمسة واحدة على هذا الهاتف أو الكمبيوتر للدخول السريع للبرنامج بدقة وأمان عالي.
+                    </p>
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const res = await registerBiometricCredential(clinic.doctorName || "Doctor");
+                          if (res.success) {
+                            alert("تم تسجيل بصمة الأصبع / Face ID بنجاح متاح الاستخدام للدخول السريع!");
+                            window.location.reload();
+                          } else {
+                            alert(res.error || "تعذر تفعيل البصمة");
+                          }
+                        }}
+                        className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Fingerprint className="w-4 h-4" />
+                        <span>تسجيل بصمة الأصبع / Face ID الآن 🖐️</span>
+                      </button>
+                      {isBiometricEnabled() && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBiometricEnabled(false);
+                            alert("تم إيقاف تفعيل الدخول بالبصمة.");
+                            window.location.reload();
+                          }}
+                          className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-rose-600/30 text-rose-300 text-xs font-bold transition-all border border-slate-700"
+                        >
+                          إلغاء البصمة
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Logo Section: Local File Upload OR Web URL Input */}
@@ -778,6 +854,78 @@ export function ClinicSettingsWizard() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Tab 3: Smart Cache & Memory Auto-Optimizer */}
+      {activeTab === "cache" && (
+        <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-6 shadow-xl">
+          <div className="space-y-1.5 border-b border-slate-800 pb-4">
+            <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold">
+              <Zap className="w-4 h-4 text-amber-400" />
+              <span>Smart Memory & Cache Auto-Optimizer</span>
+            </div>
+            <h3 className="text-lg font-black text-slate-100">
+              نظام محرك تنظيف الذاكرة المؤقتة والتسريع الذكي 🧹
+            </h3>
+            <p className="text-xs text-slate-400">
+              يقوم هذا المحرك بتفريغ الملفات المؤقتة والـ Cache المتراكم لمنع أي تعليق أو بطء أو كراش في البرنامج مع الحفاظ الكامل على اشتراكك وشعار العيادة وسجل الروشتات.
+            </p>
+          </div>
+
+          {/* Success Notification Banner */}
+          {cleanSuccessMsg && (
+            <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-2 animate-in fade-in">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+              <span>{cleanSuccessMsg}</span>
+            </div>
+          )}
+
+          {/* Memory Usage Stats Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+              <span className="text-xs text-slate-400 font-medium">حجم الذاكرة المؤقتة المستهلكة:</span>
+              <p className="text-xl font-mono font-black text-amber-400">{cacheInfo.formattedSize}</p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+              <span className="text-xs text-slate-400 font-medium">عدد السجلات المؤقتة المحفوظة:</span>
+              <p className="text-xl font-mono font-black text-emerald-400">{cacheInfo.itemCount} عناصر</p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+              <span className="text-xs text-slate-400 font-medium">آخر عملية تنظيف وتفريغ:</span>
+              <p className="text-xs font-mono font-bold text-slate-300 mt-2">
+                {cacheInfo.lastCleanedAt || "أداء ممتاز - لا يوجد تراكم قديم"}
+              </p>
+            </div>
+          </div>
+
+          {/* Features Preservation Guarantee Info */}
+          <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800/80 text-xs space-y-2">
+            <h4 className="font-bold text-slate-200 flex items-center gap-1.5">
+              <HardDrive className="w-4 h-4 text-emerald-400" />
+              <span>ضمان الأمان أثناء عملية التنظيف الذكي:</span>
+            </h4>
+            <ul className="list-disc list-inside text-slate-400 space-y-1 font-medium leading-relaxed">
+              <li>يتم تفريغ ملفات الـ PWA الكاش القديمة والملفات المؤقتة التالفة.</li>
+              <li>يتم الحفاظ الكامل على حالة تفعيل الاشتراك وكود الجهاز (Machine ID).</li>
+              <li>يتم الحفاظ الكامل على لوجو العيادة وسجل الروشتات وقائمة المرضى.</li>
+            </ul>
+          </div>
+
+          {/* Purge Cache Action Button */}
+          <div className="pt-2">
+            <button
+              type="button"
+              disabled={isCleaning}
+              onClick={handleCleanCache}
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:brightness-110 text-white font-extrabold text-xs shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${isCleaning ? "animate-spin" : ""}`} />
+              <span>{isCleaning ? "جاري تنظيف وتفريغ الذاكرة..." : "تنظيف الكاش والذاكرة المؤقتة وتسريع البرنامج الآن 🚀"}</span>
+            </button>
+          </div>
         </div>
       )}
     </div>

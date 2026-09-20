@@ -222,6 +222,32 @@ EXCEPTION WHEN duplicate_object THEN null; END $$;
 -- Ensure passwordHash column exists on existing database tables
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "passwordHash" TEXT;
 
+-- CreateTable: Subscription
+CREATE TABLE IF NOT EXISTS "Subscription" (
+    "id" TEXT NOT NULL,
+    "planId" TEXT NOT NULL,
+    "planName" TEXT NOT NULL,
+    "price" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "paymentMethod" TEXT NOT NULL DEFAULT 'vodafone',
+    "senderPhone" TEXT NOT NULL,
+    "transactionRef" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'PENDING',
+    "machineId" TEXT NOT NULL,
+    "allowedMachineIds" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "doctorName" TEXT,
+    "clinicName" TEXT,
+    "durationDays" INTEGER NOT NULL DEFAULT 30,
+    "activatedAt" TIMESTAMP(3),
+    "expiresAt" TIMESTAMP(3),
+    "signatureToken" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Subscription_pkey" PRIMARY KEY ("id")
+);
+
+CREATE INDEX IF NOT EXISTS "Subscription_machineId_idx" ON "Subscription"("machineId");
+
 -- Seed Admin User and System Clinic in Database
 INSERT INTO "Clinic" ("id", "name", "specialty", "primaryColor", "updatedAt")
 VALUES ('clinic-admin-001', 'Rosheta System Administration', 'System Administration', '#059669', NOW())

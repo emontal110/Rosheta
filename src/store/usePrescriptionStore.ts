@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { enqueuePrescriptionSave, enqueuePrescriptionDelete } from "@/lib/PrescriptionSyncQueue";
+import { useSubscriptionStore } from "@/store/useSubscriptionStore";
 
 export interface PrescriptionItem {
   id: string;
@@ -120,6 +122,18 @@ interface PrescriptionState {
   setIsAiAnalyzing: (analyzing: boolean) => void;
   resetPrescription: () => void;
 }
+
+const EMPTY_PATIENT: PatientInfo = {
+  id: "patient-new",
+  name: "",
+  nameAr: "",
+  phone: "",
+  age: 0,
+  gender: "Male",
+  bloodType: "A+",
+  allergies: "",
+  medicalHistory: "",
+};
 
 const DEFAULT_PATIENT: PatientInfo = {
   id: "patient-mohamed-001",
@@ -299,15 +313,15 @@ export const usePrescriptionStore = create<PrescriptionState>()(
   persist(
     (set, get) => ({
       prescriptionNo: "RSH-849201",
-      patient: DEFAULT_PATIENT,
+      patient: EMPTY_PATIENT,
       selectedBranchId: "branch-maadi-001",
       paperSize: "A4",
       drugLanguageMode: "ARABIC",
       visibleFields: DEFAULT_VISIBLE_FIELDS,
       printFields: DEFAULT_PRINT_FIELDS,
-      diagnosis: "التهاب الشعب الهوائية الحاد مع إجهاد عام (Acute Bronchitis)",
-      notes: "يرجى الإلتزام بالراحة التامة وتناول السوائل الدافئة والمراجعة بعد أسبوع.",
-      items: SAMPLE_INITIAL_ITEMS,
+      diagnosis: "",
+      notes: "",
+      items: [],
       isManualMode: false,
       savedPrescriptions: INITIAL_SAVED_PRESCRIPTIONS,
       savedPatients: INITIAL_SAVED_PATIENTS,
@@ -406,6 +420,10 @@ export const usePrescriptionStore = create<PrescriptionState>()(
           updatedPatients = [{ ...currentPatient, nameAr: patientName }, ...updatedPatients];
         }
 
+        // Trigger background offline-first queue sync with Supabase
+        const currentMachineId = useSubscriptionStore.getState().machineId;
+        enqueuePrescriptionSave(newRecord, currentMachineId);
+
         // Save record to archive & reset prescription to a fresh empty prescription
         set({
           savedPrescriptions: [newRecord, ...state.savedPrescriptions],
@@ -445,6 +463,9 @@ export const usePrescriptionStore = create<PrescriptionState>()(
       },
 
       deleteSavedPrescription: (id) => {
+        const currentMachineId = useSubscriptionStore.getState().machineId;
+        enqueuePrescriptionDelete(id, currentMachineId);
+
         set((state) => ({
           savedPrescriptions: state.savedPrescriptions.filter((r) => r.id !== id),
         }));

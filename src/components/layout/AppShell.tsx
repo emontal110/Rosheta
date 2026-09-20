@@ -22,6 +22,11 @@ import {
 } from "lucide-react";
 import { useClinicStore } from "@/store/useClinicStore";
 import { usePrescriptionStore } from "@/store/usePrescriptionStore";
+import { useSubscriptionStore, getSubscriptionDetails } from "@/store/useSubscriptionStore";
+import { SubscriptionGuard } from "@/components/auth/SubscriptionGuard";
+import { PwaInstallPromptModal } from "@/components/common/PwaInstallPromptModal";
+import { autoCheckAndCleanCache } from "@/lib/CacheManager";
+import { initPrescriptionSyncAutoListener } from "@/lib/PrescriptionSyncQueue";
 import pkg from "../../../package.json";
 
 // Helper to format version into major.minor format (e.g., "2.5.0" or "2.5" => "2.5")
@@ -40,7 +45,15 @@ export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const { clinic, branches } = useClinicStore();
   const { selectedBranchId, setSelectedBranchId, items, aiInteractions } = usePrescriptionStore();
+  const { subscriptions, machineId } = useSubscriptionStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  React.useEffect(() => {
+    autoCheckAndCleanCache();
+    initPrescriptionSyncAutoListener();
+  }, []);
+
+  const subDetails = getSubscriptionDetails(subscriptions, machineId);
 
   // Standalone Layout for Admin Portal & Admin Login (No main app header, no sidebar, no bottom nav)
   if (pathname?.startsWith("/admin")) {
@@ -60,11 +73,14 @@ export function AppShell({ children }: AppShellProps) {
     { href: "/patients", label: "Patients Catalog", icon: Users },
     { href: "/drugs", label: "Egyptian Drug Bank", icon: Pill, badge: "43k+" },
     { href: "/settings", label: "Clinic setting", icon: Building2 },
-    { href: "/subscriptions", label: "باقات الاشتراك", icon: Crown, badge: "PRO" },
+    { href: "/subscriptions", label: "Subscriptions", icon: Crown, badge: `⏳ ${subDetails.daysRemaining}d` },
   ];
 
   return (
     <div className="min-h-screen bg-[#070c1e] text-slate-100 flex flex-col antialiased selection:bg-emerald-500 selection:text-white">
+      {/* 10-Second Auto-Expiring PWA Installation Popup Modal */}
+      <PwaInstallPromptModal />
+
       {/* Top Navbar */}
       <header className="sticky top-0 z-40 bg-[#0f172a]/90 backdrop-blur-md border-b border-slate-800/80 px-4 lg:px-8 py-3 flex items-center justify-between no-print">
         <div className="flex items-center gap-4">
@@ -98,6 +114,27 @@ export function AppShell({ children }: AppShellProps) {
 
         {/* Doctor Quick Info & Alerts */}
         <div className="flex items-center gap-3">
+          {/* Subscription Expiration Alert Pill */}
+          {subDetails.isActive && subDetails.daysRemaining <= 7 && (
+            <Link
+              href="/subscriptions"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold animate-pulse border transition-all ${
+                subDetails.daysRemaining <= 1
+                  ? "bg-rose-500/20 text-rose-300 border-rose-500/40"
+                  : subDetails.daysRemaining <= 3
+                  ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                  : "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+              }`}
+            >
+              <Crown className="w-4 h-4 text-amber-400" />
+              <span>
+                {subDetails.daysRemaining <= 1
+                  ? "🔥 ينتهي الاشتراك غداً!"
+                  : `⚠️ متبقي ${subDetails.daysRemaining} أيام على الانتهاء`}
+              </span>
+            </Link>
+          )}
+
           {/* AI Alert Pill Indicator */}
           {aiInteractions.length > 0 && (
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold animate-pulse">
@@ -207,6 +244,26 @@ export function AppShell({ children }: AppShellProps) {
               </div>
             )}
 
+            {/* Subscription Status & Days Remaining Widget */}
+            <div className="p-3.5 rounded-2xl bg-gradient-to-tr from-emerald-950/40 via-slate-900 to-teal-950/40 border border-emerald-500/25 text-xs space-y-2 shadow-md dir-rtl">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-200 font-bold flex items-center gap-1.5 text-[11px]">
+                  <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span className="truncate max-w-[100px]">{subDetails.planName}</span>
+                </span>
+                <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full border ${subDetails.badgeColor}`}>
+                  {subDetails.statusLabel}
+                </span>
+              </div>
+              <div className="flex items-center justify-between pt-1.5 border-t border-slate-800/80 text-[11px]">
+                <span className="text-slate-400 font-medium">الأيام المتبقية:</span>
+                <span className="font-extrabold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20 flex items-center gap-1">
+                  <span>⏳</span>
+                  <span>{subDetails.daysRemaining} يوم</span>
+                </span>
+              </div>
+            </div>
+
             {/* Smart Prescription AI Info Banner */}
             <div className="p-3.5 rounded-2xl bg-gradient-to-tr from-emerald-950/40 via-slate-900 to-teal-950/30 border border-emerald-500/20 text-xs">
               <div className="flex items-center gap-2 text-emerald-400 font-bold mb-1">
@@ -248,6 +305,11 @@ export function AppShell({ children }: AppShellProps) {
                           <Icon className="w-5 h-5 text-emerald-400" />
                           <span>{link.label}</span>
                         </div>
+                        {link.badge !== undefined && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-emerald-400 border border-emerald-500/20">
+                            {link.badge}
+                          </span>
+                        )}
                       </Link>
                     );
                   })}
@@ -256,6 +318,26 @@ export function AppShell({ children }: AppShellProps) {
 
               {/* Mobile Sidebar Branch Selector / Info */}
               <div className="space-y-3 pt-4">
+                {/* Mobile Subscription Status & Days Remaining Card */}
+                <div className="p-3.5 rounded-2xl bg-gradient-to-tr from-emerald-950/40 via-slate-900 to-teal-950/40 border border-emerald-500/25 text-xs space-y-2 shadow-md dir-rtl">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-200 font-bold flex items-center gap-1.5 text-[11px]">
+                      <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span className="truncate max-w-[120px]">{subDetails.planName}</span>
+                    </span>
+                    <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full border ${subDetails.badgeColor}`}>
+                      {subDetails.statusLabel}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between pt-1.5 border-t border-slate-800/80 text-[11px]">
+                    <span className="text-slate-400 font-medium">الأيام المتبقية:</span>
+                    <span className="font-extrabold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20 flex items-center gap-1">
+                      <span>⏳</span>
+                      <span>{subDetails.daysRemaining} يوم</span>
+                    </span>
+                  </div>
+                </div>
+
                 {branches.length > 1 ? (
                   <div className="p-3.5 rounded-2xl bg-slate-800/90 border border-slate-700 text-xs space-y-2">
                     <div className="flex items-center justify-between">
@@ -300,7 +382,9 @@ export function AppShell({ children }: AppShellProps) {
 
         {/* Main Content View Container */}
         <main className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8 bg-gradient-to-b from-[#070c1e] via-[#0b132b] to-[#0f172a]">
-          {children}
+          <SubscriptionGuard>
+            {children}
+          </SubscriptionGuard>
         </main>
       </div>
 
@@ -313,10 +397,18 @@ export function AppShell({ children }: AppShellProps) {
             <Link
               key={link.href}
               href={link.href}
-              className={`flex flex-col items-center gap-1 p-2 rounded-xl text-[11px] font-medium transition-all ${isActive ? "text-emerald-400 font-bold scale-105" : "text-slate-400 hover:text-slate-200"
-                }`}
+              className={`flex flex-col items-center gap-1 p-2 rounded-xl text-[11px] font-medium transition-all relative ${
+                isActive ? "text-emerald-400 font-bold scale-105" : "text-slate-400 hover:text-slate-200"
+              }`}
             >
-              <Icon className={`w-5 h-5 ${isActive ? "text-emerald-400" : "text-slate-400"}`} />
+              <div className="relative">
+                <Icon className={`w-5 h-5 ${isActive ? "text-emerald-400" : "text-slate-400"}`} />
+                {link.href === "/subscriptions" && (
+                  <span className="absolute -top-2 -right-3 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 shadow-md border border-slate-900 leading-none">
+                    {subDetails.daysRemaining}d
+                  </span>
+                )}
+              </div>
               <span>{link.label.split(" ")[0]}</span>
             </Link>
           );

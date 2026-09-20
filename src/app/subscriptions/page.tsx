@@ -25,7 +25,7 @@ import {
   Laptop,
   CheckCircle,
 } from "lucide-react";
-import { useSubscriptionStore, SubscriptionRecord } from "@/store/useSubscriptionStore";
+import { useSubscriptionStore, SubscriptionRecord, getSubscriptionDetails, hasUsedFreeTrial } from "@/store/useSubscriptionStore";
 import { useClinicStore } from "@/store/useClinicStore";
 
 interface SubscriptionPlan {
@@ -56,6 +56,41 @@ export default function SubscriptionsPage() {
   const [copySuccess, setCopySuccess] = useState(false);
   const [isPendingView, setIsPendingView] = useState(false);
   const [submittedRecord, setSubmittedRecord] = useState<SubscriptionRecord | null>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isAppInstalled, setIsAppInstalled] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    const handleAppInstalled = () => {
+      setIsAppInstalled(true);
+      setDeferredPrompt(null);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleAppInstalled);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallPWA = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const choiceResult = await deferredPrompt.userChoice;
+      if (choiceResult.outcome === "accepted") {
+        setIsAppInstalled(true);
+      }
+      setDeferredPrompt(null);
+    } else {
+      alert("البرنامج مثبت بالفعل على جهازك أو يدعم التثبيت المباشر من قائمة المتصفح (Install App).");
+    }
+  };
 
   // Check if there is an existing pending or active subscription for this device
   const currentSub = subscriptions.find((s) => s.machineId === machineId) || null;
@@ -212,9 +247,19 @@ export default function SubscriptionsPage() {
     setTimeout(() => setCopySuccess(false), 3000);
   };
 
+  const alreadyUsedTrial = hasUsedFreeTrial(subscriptions, machineId);
+
   const handleConfirmSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPlan) return;
+
+    const isTrialPlan = selectedPlan.isTrial || selectedPlan.id === "trial" || selectedPlan.price === 0;
+
+    if (isTrialPlan && alreadyUsedTrial) {
+      alert("تم الاشتراك بالفعل في الباقة المجانية من قبل على هذا الجهاز. لا يمكن تكرار التجربة المجانية مرة أخرى، يرجى اختيار إحدى الباقات المدفوعة.");
+      setSelectedPlan(null);
+      return;
+    }
 
     if (selectedPlan.price > 0 && (!senderPhone.trim() || !transactionRef.trim())) {
       alert("يرجى إدخال رقم العملية ورقم الهاتف المحول منه لاستكمال الطلب.");
@@ -232,6 +277,7 @@ export default function SubscriptionsPage() {
       doctorName: clinic.doctorName,
       clinicName: clinic.name,
       durationDays: selectedPlan.id === "annual_vip" ? 365 : selectedPlan.id === "semi_annual" ? 180 : selectedPlan.id === "quarterly" ? 90 : 30,
+      isTrial: isTrialPlan,
     });
 
     setSubmittedRecord(newRec);
@@ -239,27 +285,119 @@ export default function SubscriptionsPage() {
     setSelectedPlan(null);
   };
 
+  const subDetails = getSubscriptionDetails(subscriptions, machineId);
+
   return (
     <div className="max-w-7xl mx-auto space-y-12 pb-16">
-      {/* Admin Portal Header Button Link */}
-      <div className="flex items-center justify-between bg-slate-900/80 border border-slate-800 p-4 rounded-3xl backdrop-blur-md shadow-lg">
+      {/* Subscriptions Header Banner */}
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900/80 border border-slate-800 p-4 sm:p-5 rounded-3xl backdrop-blur-md shadow-lg">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <Crown className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-slate-100">باقات الاشتراك والتفعيل الفوري</h2>
-            <p className="text-[11px] text-slate-400">معرف الجهاز الحالي: <span className="font-mono text-emerald-400 font-bold">{machineId}</span></p>
+            <h2 className="text-sm font-bold text-slate-100">بوابة الاشتراكات وتفعيل الأجهزة</h2>
+            <p className="text-[11px] text-slate-400">حالة الجهاز: <span className="font-mono text-emerald-400 font-bold">{machineId}</span></p>
           </div>
         </div>
 
-        <Link
-          href="/admin/subscriptions"
-          className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-emerald-600 text-white font-bold text-xs shadow-lg hover:brightness-110 transition-all cursor-pointer"
-        >
-          <Laptop className="w-4 h-4" />
-          <span>بورتال التحكم في الاشتراكات ⚙️</span>
-        </Link>
+        {/* Subscription Status & Days Remaining Rich Badges */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+          {/* 1. Status Badge */}
+          <div className={`px-3 py-1.5 rounded-2xl border text-xs font-black flex items-center gap-1.5 ${subDetails.badgeColor}`}>
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>{subDetails.statusLabel}</span>
+          </div>
+
+          {/* 2. Plan Name Badge */}
+          <div className="px-3 py-1.5 rounded-2xl bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1.5">
+            <Crown className="w-3.5 h-3.5 text-amber-400" />
+            <span>{subDetails.planName}</span>
+          </div>
+
+          {/* 3. Days Remaining Badge */}
+          <div className="px-3.5 py-1.5 rounded-2xl bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-cyan-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-black flex items-center gap-1.5 shadow-md">
+            <Clock className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+            <span>متبقي: <strong className="font-mono text-sm text-white">{subDetails.daysRemaining}</strong> يوماً</span>
+          </div>
+
+          {/* Enter Main App Button if Active */}
+          {subDetails.isActive && (
+            <Link
+              href="/"
+              className="px-4 py-1.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-extrabold text-xs shadow-md hover:brightness-110 transition-all flex items-center gap-1.5"
+            >
+              <span>الدخول للبرنامج 🚀</span>
+              <ArrowRight className="w-4 h-4 rotate-180" />
+            </Link>
+          )}
+        </div>
+      </div>
+
+      {/* One-Click PWA App Download & Install Banner */}
+      <div className="p-5 rounded-3xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-teal-950/60 border-2 border-emerald-500/40 shadow-xl space-y-4 relative overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-lg border-2 border-emerald-400/40 bg-[#131b24] shrink-0 p-1">
+              <img src="/icon.svg" alt="Rosheta App Logo" className="w-full h-full object-cover rounded-xl" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-black text-slate-100">تحميل وتثبيت برنامج Rosheta على جهازك</h3>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black">
+                  تثبيت مباشر
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                تثبيت محلي فائق السرعة ويعمل بدون إنترنت PWA Desktop & Mobile App.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleInstallPWA}
+            className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:brightness-110 text-slate-950 font-black text-xs shadow-xl shadow-emerald-950/60 flex items-center gap-2 transition-all cursor-pointer transform hover:scale-105"
+          >
+            <Laptop className="w-4 h-4 text-slate-950" />
+            <span>تنزيل وتسطيب البرنامج بنقرة واحدة 🚀</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Hardware Machine ID Binding Banner */}
+      <div className="p-4 sm:p-5 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-3 shadow-lg">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-200">
+            <Laptop className="w-4 h-4 text-emerald-400" />
+            <span>معرّف الجهاز الحالي (Hardware Machine ID):</span>
+          </div>
+          {copySuccess && (
+            <span className="text-[10px] font-bold text-emerald-400 animate-bounce">
+              ✓ تم نسخ معرّف الجهاز بنجاح!
+            </span>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-slate-950 border border-slate-800">
+          <span className="text-base font-mono font-black text-emerald-400 tracking-wider" dir="ltr">
+            {machineId}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard.writeText(machineId);
+              setCopySuccess(true);
+              setTimeout(() => setCopySuccess(false), 3000);
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 text-xs font-bold transition-all cursor-pointer"
+          >
+            <Copy className="w-3.5 h-3.5" />
+            <span>نسخ المعرّف</span>
+          </button>
+        </div>
+        <p className="text-[11px] text-slate-400 leading-relaxed">
+          * يتم ربط كل اشتراك بمُعرّف الجهاز أعلاه لضمان الأمان وحماية البيانات. لنقل الاشتراك لجهاز جديد أو إضافة أجهزة أخرى، يرجى تزويد المالك بهذا المعرّف لتعديله في لوحة التحكم.
+        </p>
       </div>
 
       {/* If Pending / Active Subscription View */}
@@ -351,6 +489,15 @@ export default function SubscriptionsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 items-stretch">
         {PLANS.map((plan) => {
           const isPopular = plan.popular;
+          const isTrialPlan = plan.isTrial || plan.id === "trial" || plan.price === 0;
+          const isTrialBlocked = isTrialPlan && alreadyUsedTrial;
+
+          const displayBadge = isTrialBlocked ? "تم الاستخدام من قبل 🚫" : plan.badge;
+          const displayBadgeColor = isTrialBlocked
+            ? "bg-rose-500/20 text-rose-300 border-rose-500/40 font-bold"
+            : plan.badgeColor || "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
+
+          const displayCta = isTrialBlocked ? "تم الاشتراك بالباقة المجانية من قبل 🚫" : plan.ctaText;
 
           return (
             <div
@@ -358,18 +505,18 @@ export default function SubscriptionsPage() {
               className={`relative rounded-3xl p-6 flex flex-col justify-between transition-all duration-300 hover:scale-[1.02] ${
                 isPopular
                   ? "bg-gradient-to-b from-emerald-950/80 via-slate-900 to-slate-950 border-2 border-emerald-500 shadow-2xl shadow-emerald-950/50 ring-4 ring-emerald-500/20"
+                  : isTrialBlocked
+                  ? "bg-slate-900/60 border border-rose-500/30 opacity-90"
                   : "bg-slate-900/90 border border-slate-800 hover:border-slate-700 shadow-xl"
               }`}
             >
               {/* Badge */}
-              {plan.badge && (
+              {displayBadge && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 shrink-0 whitespace-nowrap">
                   <span
-                    className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wide border shadow-md ${
-                      plan.badgeColor || "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                    }`}
+                    className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wide border shadow-md ${displayBadgeColor}`}
                   >
-                    {plan.badge}
+                    {displayBadge}
                   </span>
                 </div>
               )}
@@ -425,16 +572,24 @@ export default function SubscriptionsPage() {
               {/* Action Button */}
               <div className="pt-6">
                 <button
-                  onClick={() => setSelectedPlan(plan)}
+                  onClick={() => {
+                    if (isTrialBlocked) {
+                      alert("لقد تم الاشتراك بالفعل في الباقة المجانية من قبل على هذا الجهاز. يرجى اختيار إحدى الباقات المدفوعة لتجديد الاشتراك.");
+                      return;
+                    }
+                    setSelectedPlan(plan);
+                  }}
                   className={`w-full py-3 rounded-2xl font-bold text-xs shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                    isPopular
+                    isTrialBlocked
+                      ? "bg-slate-800 text-rose-300 border border-rose-500/30 hover:bg-rose-950/40"
+                      : isPopular
                       ? "bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-slate-950 font-black hover:brightness-110 shadow-emerald-950/50 hover:scale-[1.02] active:scale-[0.98]"
                       : plan.isTrial
                       ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-600 hover:text-white"
                       : "bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 hover:border-emerald-500/50"
                   }`}
                 >
-                  <span>{plan.ctaText}</span>
+                  <span>{displayCta}</span>
                 </button>
               </div>
             </div>
@@ -555,7 +710,9 @@ export default function SubscriptionsPage() {
             {/* Account Transfer Box with Copy Number Button */}
             <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-400 font-bold">الرقم المخصص للتحويل (كاش / إنستاباي):</span>
+                <span className="text-xs text-slate-400 font-bold">
+                  {paymentMethod === "vodafone" ? "رقم محفظة فودافون كاش للتحويل:" : "رقم الهاتف / الحساب على إنستاباي (InstaPay) للتحويل:"}
+                </span>
                 {copySuccess && (
                   <span className="text-[10px] font-bold text-emerald-400 animate-bounce">
                     ✓ تم نسخ الرقم بنجاح!
@@ -579,19 +736,33 @@ export default function SubscriptionsPage() {
               </div>
             </div>
 
-            {/* Payment Steps Instructions */}
+            {/* Payment Steps Instructions - Dynamic for Vodafone Cash & InstaPay */}
             <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800/90 text-xs space-y-2">
               <h4 className="font-extrabold text-amber-400 flex items-center gap-1.5">
                 <AlertCircle className="w-4 h-4 text-amber-400" />
-                <span>خطوات الدفع والتفعيل:</span>
+                <span>
+                  {paymentMethod === "vodafone"
+                    ? "خطوات الدفع والتفعيل عبر فودافون كاش (Vodafone Cash):"
+                    : "خطوات الدفع والتفعيل عبر إنستا باي (InstaPay):"}
+                </span>
               </h4>
-              <ol className="list-decimal list-inside text-slate-300 space-y-1.5 font-medium leading-relaxed">
-                <li>افتح تطبيق أنا فودافون / محفظتك أو تطبيق إنستاباي.</li>
-                <li>قم بتحويل مبلغ الباقة المحددة (<strong className="text-emerald-400 font-bold">{selectedPlan.price} ج.م</strong>) إلى الرقم: <strong className="text-emerald-400 font-mono" dir="ltr">01094085228</strong>.</li>
-                <li>أدخل رقم عملية التحويل ورقم الهاتف المرسل منه في الخانات التالية.</li>
-                <li>اضغط على زر <strong className="text-emerald-300">تأكيد وإرسال الطلب</strong>.</li>
-                <li>أرسل صورة/إيصال التحويل عبر الواتساب للرقم <strong className="text-emerald-400 font-mono" dir="ltr">01094085228</strong> لإتمام التفعيل فوراً.</li>
-              </ol>
+              {paymentMethod === "vodafone" ? (
+                <ol className="list-decimal list-inside text-slate-300 space-y-1.5 font-medium leading-relaxed">
+                  <li>افتح تطبيق <strong>أنا فودافون</strong> أو محفظتك أو اطلب الكود <code className="text-rose-400 font-mono">*9#</code>.</li>
+                  <li>قم بتحويل مبلغ الباقة المحددة (<strong className="text-emerald-400 font-bold">{selectedPlan.price} ج.م</strong>) إلى رقم الكاش: <strong className="text-emerald-400 font-mono" dir="ltr">01094085228</strong>.</li>
+                  <li>أدخل رقم عملية التحويل ورقم المحفظة التي حولت منها في الخانات بالأسفل.</li>
+                  <li>اضغط على زر <strong className="text-emerald-300">تأكيد وإرسال الطلب</strong>.</li>
+                  <li>أرسل صورة إيصال التحويل عبر الواتساب إلى <strong className="text-emerald-400 font-mono" dir="ltr">01094085228</strong> لإتمام التفعيل اللحظي.</li>
+                </ol>
+              ) : (
+                <ol className="list-decimal list-inside text-slate-300 space-y-1.5 font-medium leading-relaxed">
+                  <li>افتح تطبيق <strong>إنستا باي (InstaPay)</strong> المعتمد على هاتفك المحمول.</li>
+                  <li>اختر <strong>تحويل أموال</strong> ثم ادخل رقم الهاتف المخصص للتحويل: <strong className="text-purple-400 font-mono" dir="ltr">01094085228</strong>.</li>
+                  <li>قم بتحويل قيمة الباقة (<strong className="text-purple-300 font-bold">{selectedPlan.price} ج.م</strong>) وأكد العملية في التطبيق.</li>
+                  <li>أدخل رقم المرجع (Reference No) المكتوب بإيصال إنستاباي ورقم الهاتف في الخانات بالأسفل.</li>
+                  <li>اضغط على زر <strong className="text-purple-300">تأكيد وإرسال الطلب</strong> وسيتم مراجعة وتفعيل اشتراكك فوراً.</li>
+                </ol>
+              )}
             </div>
 
             {/* Payment Details Form */}
@@ -600,7 +771,7 @@ export default function SubscriptionsPage() {
                 {/* Transaction Ref ID Field */}
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-300 flex items-center gap-1">
-                    <span>رقم عملية التحويل (Ref ID):</span>
+                    <span>{paymentMethod === "vodafone" ? "رقم عملية التحويل (Ref ID):" : "رقم العملية / المرجع (Ref No):"}</span>
                     <span className="text-rose-400">*</span>
                   </label>
                   <input
@@ -608,7 +779,7 @@ export default function SubscriptionsPage() {
                     required={selectedPlan.price > 0}
                     value={transactionRef}
                     onChange={(e) => setTransactionRef(e.target.value)}
-                    placeholder="مثال: VF-98420195 أو 7729104"
+                    placeholder={paymentMethod === "vodafone" ? "مثال: VF-98420195" : "مثال: 492019582103"}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-xs font-mono font-bold text-slate-100 focus:outline-none focus:border-emerald-500 placeholder:text-slate-500"
                   />
                 </div>
@@ -616,7 +787,7 @@ export default function SubscriptionsPage() {
                 {/* Sender Phone Number Field */}
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-300 flex items-center gap-1">
-                    <span>رقم الهاتف المحول منه:</span>
+                    <span>{paymentMethod === "vodafone" ? "رقم محفظة فودافون كاش المرسل منها:" : "رقم الهاتف / الحساب المرسل منه:"}</span>
                     <span className="text-rose-400">*</span>
                   </label>
                   <input

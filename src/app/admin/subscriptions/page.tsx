@@ -42,12 +42,20 @@ export default function AdminSubscriptionsPortal() {
     suspendSubscription,
     deleteSubscription,
     addManualSubscription,
+    adjustSubscriptionDays,
+    updateBoundMachineId,
+    addAllowedMachineId,
+    removeAllowedMachineId,
   } = useSubscriptionStore();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"ALL" | "PENDING" | "ACTIVE" | "SUSPENDED">("ALL");
+  const [filterStatus, setFilterStatus] = useState<"ALL" | "PENDING" | "ACTIVE" | "SUSPENDED" | "FREE_TRIAL">("ALL");
   const [selectedSubForActivate, setSelectedSubForActivate] = useState<SubscriptionRecord | null>(null);
+  const [selectedSubForManage, setSelectedSubForManage] = useState<SubscriptionRecord | null>(null);
   const [customDays, setCustomDays] = useState(365);
+  const [daysDeltaInput, setDaysDeltaInput] = useState<number>(5);
+  const [newPrimaryMachineId, setNewPrimaryMachineId] = useState("");
+  const [newAllowedMachineId, setNewAllowedMachineId] = useState("");
   const [showAddManualModal, setShowAddManualModal] = useState(false);
 
   // Manual Form States (Must be declared at top level of component)
@@ -101,7 +109,14 @@ export default function AdminSubscriptionsPortal() {
   }
 
   const filteredSubs = subscriptions.filter((sub) => {
-    const matchesStatus = filterStatus === "ALL" || sub.status === filterStatus;
+    const isFreeTrial = sub.isTrial || sub.planId === "trial" || sub.price === 0 || (sub.planName && sub.planName.includes("تجريبي"));
+    const matchesStatus =
+      filterStatus === "ALL"
+        ? true
+        : filterStatus === "FREE_TRIAL"
+        ? isFreeTrial
+        : sub.status === filterStatus;
+
     const q = searchQuery.trim().toLowerCase();
     if (!q) return matchesStatus;
 
@@ -117,6 +132,9 @@ export default function AdminSubscriptionsPortal() {
   const totalRequests = subscriptions.length;
   const pendingCount = subscriptions.filter((s) => s.status === "PENDING").length;
   const activeCount = subscriptions.filter((s) => s.status === "ACTIVE").length;
+  const freeTrialCount = subscriptions.filter(
+    (s) => s.isTrial || s.planId === "trial" || s.price === 0 || (s.planName && s.planName.includes("تجريبي"))
+  ).length;
   const totalRevenue = subscriptions
     .filter((s) => s.status === "ACTIVE")
     .reduce((acc, curr) => acc + curr.price, 0);
@@ -208,11 +226,11 @@ export default function AdminSubscriptionsPortal() {
       </div>
 
       {/* Admin Statistics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-1.5 shadow-lg">
           <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
             <Hash className="w-4 h-4 text-purple-400" />
-            <span>إجمالي طلبات الاشتراكات:</span>
+            <span>إجمالي الطلبات:</span>
           </span>
           <p className="text-2xl font-black text-slate-100">{totalRequests}</p>
         </div>
@@ -220,7 +238,7 @@ export default function AdminSubscriptionsPortal() {
         <div className="p-5 rounded-3xl bg-slate-900/90 border border-amber-500/30 space-y-1.5 shadow-lg">
           <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
             <Clock className="w-4 h-4 text-amber-400" />
-            <span>طلبات قيد الانتظار:</span>
+            <span>قيد الانتظار:</span>
           </span>
           <p className="text-2xl font-black text-amber-300">{pendingCount}</p>
         </div>
@@ -233,10 +251,18 @@ export default function AdminSubscriptionsPortal() {
           <p className="text-2xl font-black text-emerald-400">{activeCount}</p>
         </div>
 
+        <div className="p-5 rounded-3xl bg-slate-900/90 border border-purple-500/30 space-y-1.5 shadow-lg">
+          <span className="text-xs font-bold text-purple-400 flex items-center gap-1.5">
+            <Sparkles className="w-4 h-4 text-purple-400" />
+            <span>الاشتراكات المجانية:</span>
+          </span>
+          <p className="text-2xl font-black text-purple-300">{freeTrialCount}</p>
+        </div>
+
         <div className="p-5 rounded-3xl bg-slate-900/90 border border-cyan-500/30 space-y-1.5 shadow-lg">
           <span className="text-xs font-bold text-cyan-400 flex items-center gap-1.5">
             <CreditCard className="w-4 h-4 text-cyan-400" />
-            <span>إجمالي إيرادات الاشتراكات:</span>
+            <span>إجمالي الإيرادات:</span>
           </span>
           <p className="text-2xl font-black text-cyan-300">{totalRevenue.toLocaleString()} ج.م</p>
         </div>
@@ -255,7 +281,7 @@ export default function AdminSubscriptionsPortal() {
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setFilterStatus("ALL")}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
@@ -279,6 +305,14 @@ export default function AdminSubscriptionsPortal() {
             }`}
           >
             المفعلة ({activeCount})
+          </button>
+          <button
+            onClick={() => setFilterStatus("FREE_TRIAL")}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              filterStatus === "FREE_TRIAL" ? "bg-purple-600 text-white shadow-lg" : "bg-slate-800 text-purple-300 hover:text-white"
+            }`}
+          >
+            🎁 المجانية ({freeTrialCount})
           </button>
         </div>
       </div>
@@ -314,9 +348,18 @@ export default function AdminSubscriptionsPortal() {
                       </p>
                     </td>
 
-                    <td className="p-4 space-y-0.5">
-                      <span className="font-extrabold text-emerald-300 block">{sub.planName}</span>
-                      <span className="font-mono text-slate-400 text-[11px]">{sub.price} ج.م</span>
+                    <td className="p-4 space-y-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-extrabold text-emerald-300 block">{sub.planName}</span>
+                        {(sub.isTrial || sub.planId === "trial" || sub.price === 0 || (sub.planName && sub.planName.includes("تجريبي"))) && (
+                          <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[10px] font-black shadow-sm">
+                            🎁 اشتراك مجاني (تجريبي)
+                          </span>
+                        )}
+                      </div>
+                      <span className="font-mono text-slate-400 text-[11px]">
+                        {sub.price === 0 ? "مجاناً (0 ج.م)" : `${sub.price} ج.م`}
+                      </span>
                     </td>
 
                     <td className="p-4">
@@ -344,10 +387,28 @@ export default function AdminSubscriptionsPortal() {
                       <p className="text-slate-400 text-[11px]">{sub.senderPhone}</p>
                     </td>
 
-                    <td className="p-4">
-                      <span className="font-mono text-[11px] font-bold text-slate-200 bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800 block w-max">
-                        {sub.machineId}
-                      </span>
+                    <td className="p-4 space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-[11px] font-bold text-slate-200 bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800 inline-block">
+                          {sub.machineId}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedSubForManage(sub);
+                            setNewPrimaryMachineId(sub.machineId);
+                          }}
+                          className="p-1 rounded-lg bg-slate-800 hover:bg-emerald-600/30 text-emerald-400 border border-slate-700 hover:border-emerald-500/40 text-[10px] transition-colors"
+                          title="تعديل كود الجهاز وإدارة الأجهزة المسموحة"
+                        >
+                          <Laptop className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      {sub.allowedMachineIds && sub.allowedMachineIds.length > 0 && (
+                        <p className="text-[10px] text-purple-400 font-bold">
+                          +{sub.allowedMachineIds.length} جهاز إضافي مسموح
+                        </p>
+                      )}
                     </td>
 
                     <td className="p-4 space-y-0.5 text-[11px]">
@@ -380,15 +441,31 @@ export default function AdminSubscriptionsPortal() {
 
                     <td className="p-4">
                       <div className="flex items-center justify-center gap-2">
-                        {/* Quick Activation Button */}
+                        {/* Days Adjuster & Manage Button */}
                         <button
                           type="button"
-                          onClick={() => setSelectedSubForActivate(sub)}
-                          className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] shadow-md transition-all flex items-center gap-1 cursor-pointer"
+                          onClick={() => {
+                            setSelectedSubForManage(sub);
+                            setNewPrimaryMachineId(sub.machineId);
+                          }}
+                          className="px-2.5 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white font-bold text-[11px] border border-purple-500/30 transition-all flex items-center gap-1 cursor-pointer"
+                          title="تعديل الأيام (+ / -) وإدارة الأجهزة"
                         >
-                          <Play className="w-3 h-3" />
-                          <span>تفعيل الباقة</span>
+                          <Sparkles className="w-3 h-3 text-purple-400" />
+                          <span>إدارة الأيام والتفعيل</span>
                         </button>
+
+                        {/* Quick Activation Button */}
+                        {sub.status !== "ACTIVE" && (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedSubForActivate(sub)}
+                            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] shadow-md transition-all flex items-center gap-1 cursor-pointer"
+                          >
+                            <Play className="w-3 h-3" />
+                            <span>تفعيل الباقة</span>
+                          </button>
+                        )}
 
                         {/* Suspend Button */}
                         {sub.status === "ACTIVE" && (
@@ -406,12 +483,12 @@ export default function AdminSubscriptionsPortal() {
                         <button
                           type="button"
                           onClick={() => {
-                            if (confirm("هل أنت تأكد من حذف هذا الطلب؟")) {
+                            if (confirm("هل أنت تأكد من حذف هذا الاشتراك نهائياً ومسح كافة بياناته من المنظومة؟")) {
                               deleteSubscription(sub.id);
                             }
                           }}
                           className="p-1.5 rounded-xl bg-slate-800 hover:bg-rose-600/30 text-rose-400 border border-slate-700 hover:border-rose-500/40 transition-colors"
-                          title="حذف الطلب"
+                          title="حذف نهائي للمستند والاشتراك"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -610,6 +687,227 @@ export default function AdminSubscriptionsPortal() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Manage Subscription & Days Adjuster (+ / -) Modal */}
+      {selectedSubForManage && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-6 shadow-2xl relative overflow-y-auto max-h-[90vh] dir-rtl">
+            <button
+              onClick={() => setSelectedSubForManage(null)}
+              className="absolute top-4 right-4 p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Modal Header */}
+            <div className="space-y-1 border-b border-slate-800 pb-4">
+              <span className="text-xs font-bold text-purple-400 flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4" />
+                <span>إدارة الاشتراك والأيام والأجهزة المسموحة</span>
+              </span>
+              <h3 className="text-lg font-black text-slate-100">
+                اشتراك: {selectedSubForManage.doctorName || "دكتور غير محدد"} ({selectedSubForManage.clinicName || "عيادة خاصة"})
+              </h3>
+              <p className="text-xs text-slate-400">
+                تعديل مدة الاشتراك بالزيادة أو النقصان، أو تغيير كود الجهاز المرتبط، وإضافة أجهزة متعددة.
+              </p>
+            </div>
+
+            {/* 1. Days Adjuster Section (+ / - Days) */}
+            <div className="p-4 rounded-2xl bg-slate-950 border border-purple-500/30 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                  <Clock className="w-4 h-4 text-amber-400" />
+                  <span>تعديل أيام الاشتراك (+ / - Days Adjuster):</span>
+                </span>
+                <span className="text-xs font-mono font-extrabold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-xl border border-emerald-500/20">
+                  ينتهي: {selectedSubForManage.expiresAt ? new Date(selectedSubForManage.expiresAt).toLocaleDateString("ar-EG") : "غير محدد"}
+                </span>
+              </div>
+
+              {/* Quick Days Adjustment Buttons */}
+              <div className="grid grid-cols-4 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    adjustSubscriptionDays(selectedSubForManage.id, 5);
+                    const updated = subscriptions.find((s) => s.id === selectedSubForManage.id);
+                    if (updated) setSelectedSubForManage(updated);
+                  }}
+                  className="py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 text-xs font-bold transition-all"
+                >
+                  +5 أيام 🟢
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    adjustSubscriptionDays(selectedSubForManage.id, 30);
+                    const updated = subscriptions.find((s) => s.id === selectedSubForManage.id);
+                    if (updated) setSelectedSubForManage(updated);
+                  }}
+                  className="py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 text-xs font-bold transition-all"
+                >
+                  +30 يوم 🚀
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    adjustSubscriptionDays(selectedSubForManage.id, -5);
+                    const updated = subscriptions.find((s) => s.id === selectedSubForManage.id);
+                    if (updated) setSelectedSubForManage(updated);
+                  }}
+                  className="py-2 rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-xs font-bold transition-all"
+                >
+                  -5 أيام 🔻
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    adjustSubscriptionDays(selectedSubForManage.id, -30);
+                    const updated = subscriptions.find((s) => s.id === selectedSubForManage.id);
+                    if (updated) setSelectedSubForManage(updated);
+                  }}
+                  className="py-2 rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-xs font-bold transition-all"
+                >
+                  -30 يوم 🔻
+                </button>
+              </div>
+
+              {/* Custom Delta Days Input */}
+              <div className="flex gap-2 pt-1">
+                <input
+                  type="number"
+                  placeholder="أدخل عدد الأيام (+ أو -)"
+                  value={daysDeltaInput}
+                  onChange={(e) => setDaysDeltaInput(Number(e.target.value))}
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs font-mono font-bold text-slate-100 focus:outline-none focus:border-purple-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (daysDeltaInput !== 0) {
+                      adjustSubscriptionDays(selectedSubForManage.id, daysDeltaInput);
+                      const updated = subscriptions.find((s) => s.id === selectedSubForManage.id);
+                      if (updated) setSelectedSubForManage(updated);
+                    }
+                  }}
+                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shrink-0 transition-all cursor-pointer"
+                >
+                  تطبيق التعديل (+/-)
+                </button>
+              </div>
+            </div>
+
+            {/* 2. Primary Bound Machine ID Transfer */}
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+              <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                <Laptop className="w-4 h-4 text-emerald-400" />
+                <span>كود الجهاز الأساسي المرتبط (Primary Bound Machine ID):</span>
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newPrimaryMachineId}
+                  onChange={(e) => setNewPrimaryMachineId(e.target.value)}
+                  placeholder="مثال: RSH-8492-E49E"
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs font-mono font-bold text-slate-100 focus:outline-none focus:border-emerald-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (newPrimaryMachineId.trim()) {
+                      updateBoundMachineId(selectedSubForManage.id, newPrimaryMachineId);
+                      alert("تم تغيير كود الجهاز المرتبط بنجاح وترحيل الاشتراك عليه.");
+                      const updated = subscriptions.find((s) => s.id === selectedSubForManage.id);
+                      if (updated) setSelectedSubForManage(updated);
+                    }
+                  }}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shrink-0 transition-all cursor-pointer"
+                >
+                  نقل للجهاز الجديد
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-500">
+                * عند تغيير كود الجهاز، يتم نقل الاشتراك والترخيص مباشرة للـ Machine ID الجديد دون مسح أي بيانات.
+              </p>
+            </div>
+
+            {/* 3. Multi-Device Licensing (Allowed Machine IDs) */}
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+              <label className="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+                <Laptop className="w-4 h-4 text-purple-400" />
+                <span>أجهزة إضافية مسموح بها على نفس الاشتراك (Multi-Device Licensing):</span>
+              </label>
+
+              {/* Add New Allowed Machine ID */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newAllowedMachineId}
+                  onChange={(e) => setNewAllowedMachineId(e.target.value)}
+                  placeholder="أدخل كود جهاز إضافي (Machine ID)"
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs font-mono font-bold text-slate-100 focus:outline-none focus:border-purple-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (newAllowedMachineId.trim()) {
+                      addAllowedMachineId(selectedSubForManage.id, newAllowedMachineId);
+                      setNewAllowedMachineId("");
+                      const updated = subscriptions.find((s) => s.id === selectedSubForManage.id);
+                      if (updated) setSelectedSubForManage(updated);
+                    }
+                  }}
+                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shrink-0 transition-all cursor-pointer"
+                >
+                  إضافة جهاز ➕
+                </button>
+              </div>
+
+              {/* Allowed Devices List */}
+              {selectedSubForManage.allowedMachineIds && selectedSubForManage.allowedMachineIds.length > 0 ? (
+                <div className="space-y-1.5 pt-1">
+                  <p className="text-[11px] font-bold text-slate-400">الأجهزة الإضافية المسموحة حالياً:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedSubForManage.allowedMachineIds.map((mId) => (
+                      <span
+                        key={mId}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-800 border border-slate-700 font-mono text-xs text-purple-300 font-bold"
+                      >
+                        <span>{mId}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            removeAllowedMachineId(selectedSubForManage.id, mId);
+                            const updated = subscriptions.find((s) => s.id === selectedSubForManage.id);
+                            if (updated) setSelectedSubForManage(updated);
+                          }}
+                          className="hover:text-rose-400 p-0.5 rounded"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[11px] text-slate-500">لا توجد أجهزة إضافية مسجلة على هذا الاشتراك حتى الآن.</p>
+              )}
+            </div>
+
+            {/* Close Modal Button */}
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setSelectedSubForManage(null)}
+                className="w-full py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition-all"
+              >
+                إغلاق النافذة
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

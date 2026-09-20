@@ -7,6 +7,11 @@ export function PwaInstallPromptModal() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showPopup, setShowPopup] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(10);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     // Check if app is already running in installed standalone mode
@@ -81,7 +86,7 @@ export function PwaInstallPromptModal() {
     }
   };
 
-  if (!showPopup) return null;
+  if (!mounted || !showPopup) return null;
 
   return (
     <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-md animate-in slide-in-from-top-6 duration-300 dir-rtl no-print">

@@ -149,7 +149,7 @@ export const useSubscriptionStore = create<SubscriptionStoreState>()(
     (set, get) => ({
       subscriptions: INITIAL_SUBSCRIPTIONS,
       activeSubscription: null,
-      machineId: generateMachineId(),
+      machineId: "RSH-0000-0000",
 
       submitSubscriptionRequest: (data) => {
         const newSub: SubscriptionRecord = {
@@ -319,7 +319,7 @@ export const useSubscriptionStore = create<SubscriptionStoreState>()(
 
       getMachineId: () => {
         const state = get();
-        if (!state.machineId) {
+        if (!state.machineId || state.machineId === "RSH-0000-0000") {
           const newId = generateMachineId();
           set({ machineId: newId });
           return newId;

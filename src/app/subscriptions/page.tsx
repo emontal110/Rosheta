@@ -58,6 +58,11 @@ export default function SubscriptionsPage() {
   const [submittedRecord, setSubmittedRecord] = useState<SubscriptionRecord | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isAppInstalled, setIsAppInstalled] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {

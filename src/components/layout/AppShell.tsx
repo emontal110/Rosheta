@@ -47,8 +47,10 @@ export function AppShell({ children }: AppShellProps) {
   const { selectedBranchId, setSelectedBranchId, items, aiInteractions } = usePrescriptionStore();
   const { subscriptions, machineId } = useSubscriptionStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   React.useEffect(() => {
+    setMounted(true);
     autoCheckAndCleanCache();
     initPrescriptionSyncAutoListener();
   }, []);
@@ -67,13 +69,14 @@ export function AppShell({ children }: AppShellProps) {
   }
 
   const activeBranch = branches.find((b) => b.id === selectedBranchId) || branches[0];
+  const daysDisplay = mounted ? `${subDetails.daysRemaining}d` : "0d";
 
   const navLinks = [
     { href: "/", label: "Prescription Builder", icon: FileText, badge: items.length },
     { href: "/patients", label: "Patients Catalog", icon: Users },
     { href: "/drugs", label: "Egyptian Drug Bank", icon: Pill, badge: "43k+" },
     { href: "/settings", label: "Clinic setting", icon: Building2 },
-    { href: "/subscriptions", label: "Subscriptions", icon: Crown, badge: `⏳ ${subDetails.daysRemaining}d` },
+    { href: "/subscriptions", label: "Subscriptions", icon: Crown, badge: `⏳ ${daysDisplay}` },
   ];
 
   return (

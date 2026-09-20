@@ -22,6 +22,15 @@ import {
 } from "lucide-react";
 import { useClinicStore } from "@/store/useClinicStore";
 import { usePrescriptionStore } from "@/store/usePrescriptionStore";
+import pkg from "../../../package.json";
+
+// Helper to format version into major.minor format (e.g., "2.5.0" or "2.5" => "2.5")
+const getDisplayVersion = (rawVersion: string): string => {
+  const parts = rawVersion.split(".");
+  const major = parts[0] || "1";
+  const minor = parts[1] || "0";
+  return `${major}.${minor}`;
+};
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -77,7 +86,7 @@ export function AppShell({ children }: AppShellProps) {
                   Rosheta
                 </span>
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  v2.5 PWA
+                  v{getDisplayVersion(pkg.version)} PWA
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 hidden sm:block">

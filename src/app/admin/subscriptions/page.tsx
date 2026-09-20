@@ -57,6 +57,8 @@ export default function AdminSubscriptionsPortal() {
   const [newPrimaryMachineId, setNewPrimaryMachineId] = useState("");
   const [newAllowedMachineId, setNewAllowedMachineId] = useState("");
   const [showAddManualModal, setShowAddManualModal] = useState(false);
+  const [daysInputMap, setDaysInputMap] = useState<Record<string, number>>({});
+  const [feedbackMap, setFeedbackMap] = useState<Record<string, string>>({});
 
   // Manual Form States (Must be declared at top level of component)
   const [manualDoctor, setManualDoctor] = useState("");
@@ -330,6 +332,7 @@ export default function AdminSubscriptionsPortal() {
                 <th className="p-4">كود الجهاز (Machine ID)</th>
                 <th className="p-4">تاريخ الطلب / الانتهاء</th>
                 <th className="p-4">الحالة</th>
+                <th className="p-4 text-center">تعديل الأيام (+ / -)</th>
                 <th className="p-4 text-center">أدوات التحكم والإدارة</th>
               </tr>
             </thead>
@@ -439,6 +442,69 @@ export default function AdminSubscriptionsPortal() {
                       )}
                     </td>
 
+                    {/* Inline Days Adjustment (+ / - Days Input & Edit Button) */}
+                    <td className="p-4">
+                      <div className="flex items-center justify-center gap-1.5 bg-slate-950/90 p-1.5 rounded-2xl border border-purple-500/30 shadow-inner">
+                        <input
+                          type="number"
+                          placeholder="+/- أيام"
+                          value={daysInputMap[sub.id] !== undefined ? daysInputMap[sub.id] : ""}
+                          onChange={(e) => {
+                            const val = e.target.value === "" ? 0 : Number(e.target.value);
+                            setDaysInputMap((prev) => ({ ...prev, [sub.id]: val }));
+                          }}
+                          className="w-16 px-2 py-1 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono font-bold text-slate-100 text-center focus:outline-none focus:border-purple-500 placeholder:text-slate-600"
+                        />
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const delta = daysInputMap[sub.id];
+                            if (delta === undefined || delta === 0 || isNaN(delta)) {
+                              alert("يرجى إدخال عدد الأيام المراد إضافتها (مثل +30) أو خصمها (مثل -5).");
+                              return;
+                            }
+
+                            // 1. Update local Zustand state & re-sign signature token
+                            adjustSubscriptionDays(sub.id, delta);
+
+                            // 2. Sync with Database & Admin API backend
+                            try {
+                              await fetch("/api/admin/subscriptions/manage", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  action: "adjust_days",
+                                  subscriptionId: sub.id,
+                                  machineId: sub.machineId,
+                                  daysDelta: delta,
+                                }),
+                              });
+                            } catch (err) {
+                              console.error("Backend sync notification:", err);
+                            }
+
+                            setFeedbackMap((prev) => ({
+                              ...prev,
+                              [sub.id]: delta > 0 ? `+${delta} يوم ✓` : `${delta} يوم ✓`,
+                            }));
+
+                            setTimeout(() => {
+                              setFeedbackMap((prev) => ({ ...prev, [sub.id]: "" }));
+                            }, 3000);
+                          }}
+                          className="px-2.5 py-1 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:brightness-110 text-white font-extrabold text-[11px] shadow-md transition-all cursor-pointer shrink-0 flex items-center gap-1"
+                        >
+                          <span>تعديل</span>
+                          <Sparkles className="w-3 h-3 text-purple-300" />
+                        </button>
+                      </div>
+                      {feedbackMap[sub.id] && (
+                        <p className="text-[10px] text-center font-bold text-emerald-400 mt-1 animate-bounce">
+                          {feedbackMap[sub.id]}
+                        </p>
+                      )}
+                    </td>
+
                     <td className="p-4">
                       <div className="flex items-center justify-center gap-2">
                         {/* Days Adjuster & Manage Button */}
@@ -498,7 +564,7 @@ export default function AdminSubscriptionsPortal() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-slate-400 font-bold">
+                  <td colSpan={9} className="p-8 text-center text-slate-400 font-bold">
                     لا توجد طلبات اشتراك مطابقة للبحث الحالي.
                   </td>
                 </tr>

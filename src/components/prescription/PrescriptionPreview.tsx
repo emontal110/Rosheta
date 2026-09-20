@@ -102,9 +102,9 @@ export function PrescriptionPreview({ onOpenShareModal, hideToolbar = false }: P
     <div className="space-y-4">
       {/* Action Toolbar */}
       {!hideToolbar && (
-        <div className="p-3.5 rounded-2xl bg-slate-900/95 border border-slate-800 space-y-3 no-print shadow-lg sticky top-0 z-20 backdrop-blur-md">
-          {/* Row 1: Selectors (Paper Size A4/A5 + Drug Language Mode) */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-2.5">
+        <div className="p-3.5 rounded-2xl bg-slate-900/95 border border-slate-800 no-print shadow-lg sticky top-0 z-20 backdrop-blur-md">
+          {/* Selectors (Paper Size A4/A5 + Drug Language Mode) */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
             {/* Paper Size Selector Container */}
             <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-800 border border-slate-700">
               <span className="text-[10px] font-bold text-slate-400 px-1.5">حجم الورقة:</span>
@@ -169,40 +169,6 @@ export function PrescriptionPreview({ onOpenShareModal, hideToolbar = false }: P
                 عربي + En
               </button>
             </div>
-          </div>
-
-          {/* Row 2: Export & Action Buttons */}
-          <div className="flex flex-wrap items-center justify-end gap-2.5">
-            <button
-              type="button"
-              onClick={handleExportPngImage}
-              disabled={isExportingImage}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-800 text-slate-200 border border-slate-700 text-xs font-semibold hover:bg-slate-700 transition-all disabled:opacity-50"
-              title="تنزيل الروشتة كصورة عالية الجودة"
-            >
-              <ImageIcon className="w-3.5 h-3.5 text-cyan-400" />
-              <span>{isExportingImage ? "جاري التجهيز..." : "حفظ كـ صورة PNG"}</span>
-            </button>
-
-            {onOpenShareModal && (
-              <button
-                type="button"
-                onClick={onOpenShareModal}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-semibold hover:bg-emerald-500/20 transition-all"
-              >
-                <Share2 className="w-3.5 h-3.5" />
-                <span>مشاركة عبر الواتساب (PDF / PNG)</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-bold shadow-lg shadow-emerald-900/40 hover:brightness-110 transition-all"
-            >
-              <Printer className="w-4 h-4" />
-              <span>طباعة الروشتة فقط</span>
-            </button>
           </div>
         </div>
       )}
@@ -424,6 +390,52 @@ export function PrescriptionPreview({ onOpenShareModal, hideToolbar = false }: P
           </table>
         </div>
       </div>
+
+      {/* Bottom Action Bar: Export & Print Controls placed directly below the prescription sheet */}
+      {!hideToolbar && (
+        <div className="p-4 rounded-2xl bg-slate-900/95 border border-slate-800 no-print shadow-2xl backdrop-blur-md flex flex-wrap items-center justify-between gap-3 sticky bottom-4 z-30">
+          <div className="flex items-center gap-2 text-xs text-slate-300 font-bold">
+            <Sparkles className="w-4 h-4 text-emerald-400" />
+            <span>خيارات حفظ ومعاينة الروشتة:</span>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-end gap-2.5">
+            {/* 1. Save as PNG Image */}
+            <button
+              type="button"
+              onClick={handleExportPngImage}
+              disabled={isExportingImage}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 text-slate-200 border border-slate-700 text-xs font-semibold hover:bg-slate-700 hover:text-white transition-all disabled:opacity-50 shadow-sm"
+              title="تنزيل الروشتة كصورة عالية الجودة"
+            >
+              <ImageIcon className="w-4 h-4 text-cyan-400" />
+              <span>{isExportingImage ? "جاري التجهيز..." : "حفظ كـ صورة PNG"}</span>
+            </button>
+
+            {/* 2. Share via WhatsApp */}
+            {onOpenShareModal && (
+              <button
+                type="button"
+                onClick={onOpenShareModal}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-semibold hover:bg-emerald-500/20 transition-all shadow-sm"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>مشاركة عبر الواتساب (PDF / PNG)</span>
+              </button>
+            )}
+
+            {/* 3. Print Only */}
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white text-xs font-bold shadow-lg shadow-emerald-900/40 hover:brightness-110 active:scale-95 transition-all"
+            >
+              <Printer className="w-4 h-4" />
+              <span>طباعة الروشتة فقط</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

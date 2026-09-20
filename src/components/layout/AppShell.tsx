@@ -69,8 +69,8 @@ export function AppShell({ children }: AppShellProps) {
           {/* Logo & Brand Name */}
           <Link href="/" className="flex items-center gap-3 group">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-cyan-400 p-[2px] shadow-glow transition-transform group-hover:scale-105">
-              <div className="w-full h-full bg-slate-900 rounded-[10px] flex items-center justify-center">
-                <Activity className="w-5 h-5 text-emerald-400 animate-pulse" />
+              <div className="w-full h-full bg-slate-900 rounded-[10px] flex items-center justify-center overflow-hidden">
+                <img src="/icon.svg" alt="Rosheta Logo" className="w-full h-full object-cover" />
               </div>
             </div>
             <div>
@@ -221,7 +221,10 @@ export function AppShell({ children }: AppShellProps) {
             <div className="w-4/5 max-w-xs bg-slate-900 h-full p-5 flex flex-col justify-between border-r border-slate-800 overflow-y-auto">
               <div>
                 <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
-                  <span className="font-bold text-lg text-emerald-400">Rosheta Navigation</span>
+                  <div className="flex items-center gap-2.5">
+                    <img src="/icon.svg" alt="Rosheta" className="w-7 h-7 rounded-lg object-cover border border-slate-700/60" />
+                    <span className="font-bold text-lg text-emerald-400">Rosheta Navigation</span>
+                  </div>
                   <button onClick={() => setMobileMenuOpen(false)} className="p-1 rounded-lg text-slate-400 hover:text-white">
                     <X size={20} />
                   </button>

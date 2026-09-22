@@ -269,6 +269,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, subscriptions: globalServerSubscriptions });
     }
 
+    // 6. Update Doctor & Clinic Info by Doctor Name Sync
+    if (action === "update_doctor_info" && machineId) {
+      const { doctorName, clinicName } = body;
+
+      globalServerSubscriptions.forEach((sub) => {
+        if (sub.machineId === machineId || (sub.allowedMachineIds && sub.allowedMachineIds.includes(machineId))) {
+          if (doctorName !== undefined) sub.doctorName = doctorName;
+          if (clinicName !== undefined) sub.clinicName = clinicName;
+        }
+      });
+
+      try {
+        await prisma.subscription.updateMany({
+          where: {
+            OR: [
+              { machineId: machineId },
+              { allowedMachineIds: { has: machineId } },
+            ],
+          },
+          data: {
+            ...(doctorName !== undefined ? { doctorName } : {}),
+            ...(clinicName !== undefined ? { clinicName } : {}),
+          },
+        });
+      } catch (dbErr) {
+        console.warn("Supabase DB update doctor info error:", dbErr);
+      }
+
+      return NextResponse.json({ success: true, subscriptions: globalServerSubscriptions });
+    }
+
     return NextResponse.json({ success: true, subscriptions: globalServerSubscriptions });
   } catch (error) {
     return NextResponse.json({ success: false, error: "Server processing error" }, { status: 500 });

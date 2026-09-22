@@ -41,7 +41,6 @@ export default function AdminSubscriptionsPortal() {
     activateSubscription,
     suspendSubscription,
     deleteSubscription,
-    addManualSubscription,
     adjustSubscriptionDays,
     updateBoundMachineId,
     addAllowedMachineId,
@@ -57,7 +56,6 @@ export default function AdminSubscriptionsPortal() {
   const [daysDeltaInput, setDaysDeltaInput] = useState<number>(5);
   const [newPrimaryMachineId, setNewPrimaryMachineId] = useState("");
   const [newAllowedMachineId, setNewAllowedMachineId] = useState("");
-  const [showAddManualModal, setShowAddManualModal] = useState(false);
   const [daysInputMap, setDaysInputMap] = useState<Record<string, number>>({});
   const [feedbackMap, setFeedbackMap] = useState<Record<string, string>>({});
   const [globalToast, setGlobalToast] = useState<string | null>(null);
@@ -69,14 +67,6 @@ export default function AdminSubscriptionsPortal() {
     confirmLabel: string;
     confirmColor: "rose" | "amber" | "emerald";
   } | null>(null);
-
-  // Manual Form States (Must be declared at top level of component)
-  const [manualDoctor, setManualDoctor] = useState("");
-  const [manualClinic, setManualClinic] = useState("");
-  const [manualMachineId, setManualMachineId] = useState("");
-  const [manualPlanName, setManualPlanName] = useState("الاشتراك السنوي (VIP)");
-  const [manualPrice, setManualPrice] = useState(1600);
-  const [manualDuration, setManualDuration] = useState(365);
 
   // Periodic server sync for instant mobile <-> PC admin portal real-time synchronization
   useEffect(() => {
@@ -190,7 +180,7 @@ export default function AdminSubscriptionsPortal() {
 
     return (
       <tr key={sub.id} className="hover:bg-slate-800/50 transition-colors border-b border-slate-800/40">
-        {/* 1. كود الجهاز (Machine ID) */}
+        {/* 1. كود الجهاز (Machine ID) والطبيب */}
         <td className="p-4 space-y-1">
           <div className="flex items-center gap-1.5">
             <span className="font-mono text-xs font-black text-emerald-400 bg-slate-950 px-3 py-1 rounded-xl border border-slate-800 inline-block tracking-wider" dir="ltr">
@@ -208,8 +198,28 @@ export default function AdminSubscriptionsPortal() {
               <Laptop className="w-3.5 h-3.5" />
             </button>
           </div>
+          {/* Doctor Name & Clinic Name under Machine ID */}
+          <div className="pt-1 space-y-0.5">
+            {sub.doctorName ? (
+              <div className="text-xs font-black text-slate-100 flex items-center gap-1">
+                <span className="text-emerald-400">👨‍⚕️</span>
+                <span className="text-slate-100">{sub.doctorName}</span>
+              </div>
+            ) : (
+              <div className="text-[11px] text-amber-400/90 font-bold flex items-center gap-1">
+                <span>⏳</span>
+                <span>بانتظار تسجيل الاسم</span>
+              </div>
+            )}
+            {sub.clinicName && (
+              <div className="text-[10px] text-slate-400 font-semibold truncate max-w-[180px] flex items-center gap-1">
+                <span>🏥</span>
+                <span>{sub.clinicName}</span>
+              </div>
+            )}
+          </div>
           {sub.allowedMachineIds && sub.allowedMachineIds.length > 0 && (
-            <p className="text-[10px] text-purple-400 font-bold">
+            <p className="text-[10px] text-purple-400 font-bold pt-0.5">
               +{sub.allowedMachineIds.length} جهاز إضافي مسموح
             </p>
           )}
@@ -391,35 +401,6 @@ export default function AdminSubscriptionsPortal() {
     );
   };
 
-  const handleCreateManualSub = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!manualDoctor || !manualMachineId) {
-      alert("يرجى إدخال اسم الطبيب وكود الجهاز.");
-      return;
-    }
-
-    addManualSubscription({
-      planId: "manual",
-      planName: manualPlanName,
-      price: Number(manualPrice),
-      paymentMethod: "vodafone",
-      senderPhone: "إدخال يدوي",
-      transactionRef: `MANUAL-${Date.now().toString().slice(-6)}`,
-      machineId: manualMachineId,
-      doctorName: manualDoctor,
-      clinicName: manualClinic || "عيادة خاصة",
-      status: "ACTIVE",
-      activatedAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + manualDuration * 24 * 60 * 60 * 1000).toISOString(),
-      durationDays: manualDuration,
-    });
-
-    setShowAddManualModal(false);
-    setManualDoctor("");
-    setManualClinic("");
-    setManualMachineId("");
-  };
-
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-16">
       {/* Header Bar */}
@@ -444,14 +425,6 @@ export default function AdminSubscriptionsPortal() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowAddManualModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-lg shadow-emerald-950/40 transition-all cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>إضافة اشتراك يدوي جديد ➕</span>
-          </button>
-
           <Link
             href="/subscriptions"
             className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition-all"
@@ -755,104 +728,6 @@ export default function AdminSubscriptionsPortal() {
         </div>
       )}
 
-      {/* Manual Subscription Modal */}
-      {showAddManualModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <form onSubmit={handleCreateManualSub} className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-5 shadow-2xl relative">
-            <button
-              type="button"
-              onClick={() => setShowAddManualModal(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="space-y-1">
-              <h3 className="text-lg font-black text-slate-100 flex items-center gap-2">
-                <Plus className="w-5 h-5 text-emerald-400" />
-                <span>إضافة اشتراك يدوي جديد</span>
-              </h3>
-              <p className="text-xs text-slate-400">إدخال بيانات عيادة أو طبيب وتفعيل الاشتراك فوراً.</p>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div className="space-y-1">
-                <label className="font-bold text-slate-300">اسم الطبيب:</label>
-                <input
-                  type="text"
-                  required
-                  value={manualDoctor}
-                  onChange={(e) => setManualDoctor(e.target.value)}
-                  placeholder="مثال: د. أحمد المحمودي"
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-bold text-slate-300">اسم العيادة / المركز:</label>
-                <input
-                  type="text"
-                  value={manualClinic}
-                  onChange={(e) => setManualClinic(e.target.value)}
-                  placeholder="مثال: مركز الحياة الطبي"
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-bold text-slate-300">كود الجهاز (Machine ID):</label>
-                <input
-                  type="text"
-                  required
-                  value={manualMachineId}
-                  onChange={(e) => setManualMachineId(e.target.value)}
-                  placeholder="مثال: RSH-8492-E49E"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 font-mono text-slate-100 focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-300">اسم الباقة:</label>
-                  <input
-                    type="text"
-                    value={manualPlanName}
-                    onChange={(e) => setManualPlanName(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-300">مدة التفعيل (أيام):</label>
-                  <input
-                    type="number"
-                    value={manualDuration}
-                    onChange={(e) => setManualDuration(Number(e.target.value))}
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 font-mono text-slate-100 focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-2 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowAddManualModal(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold"
-              >
-                إلغاء
-              </button>
-              <button
-                type="submit"
-                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg"
-              >
-                تفعيل وإضافة الاشتراك
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
       {/* Manage Subscription & Days Adjuster (+ / -) Modal */}
       {selectedSubForManage && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
@@ -865,17 +740,29 @@ export default function AdminSubscriptionsPortal() {
             </button>
 
             {/* Modal Header */}
-            <div className="space-y-1 border-b border-slate-800 pb-4">
-              <span className="text-xs font-bold text-purple-400 flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4" />
-                <span>إدارة الاشتراك والأيام والأجهزة المسموحة</span>
-              </span>
-              <h3 className="text-lg font-black text-slate-100">
-                اشتراك: {selectedSubForManage.doctorName || "دكتور غير محدد"} ({selectedSubForManage.clinicName || "عيادة خاصة"})
-              </h3>
-              <p className="text-xs text-slate-400">
-                تعديل مدة الاشتراك بالزيادة أو النقصان، أو تغيير كود الجهاز المرتبط، وإضافة أجهزة متعددة.
-              </p>
+            <div className="space-y-3 border-b border-slate-800 pb-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-purple-400 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4" />
+                  <span>إدارة الاشتراك والأيام والأجهزة المسموحة</span>
+                </span>
+                <span className="font-mono text-xs font-black text-emerald-400 bg-slate-950 px-3 py-1 rounded-xl border border-slate-800" dir="ltr">
+                  {selectedSubForManage.machineId}
+                </span>
+              </div>
+              
+              <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                <div className="text-sm font-black text-slate-100 flex items-center gap-2">
+                  <span className="text-emerald-400">👨‍⚕️</span>
+                  <span>{selectedSubForManage.doctorName || "لم يتم تسجيل اسم الطبيب بعد (بانتظار التعبئة)"}</span>
+                </div>
+                {selectedSubForManage.clinicName && (
+                  <div className="text-xs font-semibold text-slate-400 flex items-center gap-2">
+                    <span>🏥</span>
+                    <span>{selectedSubForManage.clinicName}</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* 1. Days Adjuster Section (+ / - Days) */}

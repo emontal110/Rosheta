@@ -42,50 +42,32 @@ interface ClinicStoreState {
 }
 
 const INITIAL_CLINIC: ClinicBranding = {
-  id: "clinic-el-hayah-001",
-  name: "El-Hayah Medical & Aesthetic Centers",
-  nameAr: "مجمع عيادات ومراكز الحياة الطبية التخصصية",
-  specialty: "Multi-Specialty Human Clinics & Aesthetics",
-  logoUrl: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=300",
+  id: "clinic-001",
+  name: "",
+  nameAr: "",
+  specialty: "",
+  logoUrl: "",
   primaryColor: "#059669", // Emerald Medical Teal
   fontFamily: "'Cairo', sans-serif",
-  headerText: "عيادات د. أحمد السيد - استشاري الأمراض المزمنة والتجميل",
-  footerText: "برج الأطباء - القاهرة والإسكندرية | للطلبات والاستفسار: 19001",
+  headerText: "",
+  footerText: "",
   showHeader: true,
   showFooter: true,
-  notesTemplate: "يرجى الالتزام بالجرعات والمراجعة بعد أسبوع مع الفحوصات والتحاليل.",
-  doctorName: "Dr. Ahmed El-Sayed (د. أحمد السيد)",
-  doctorTitle: "استشاري الباطنة العامة وعلاج الألم والأمراض المزمنة",
-  syndicateId: "نقابة الأطباء: 84920",
+  notesTemplate: "",
+  doctorName: "",
+  doctorTitle: "",
+  syndicateId: "",
 };
 
 const INITIAL_BRANCHES: BranchInfo[] = [
   {
-    id: "branch-maadi-001",
-    name: "Maadi Main Branch",
-    nameAr: "فرع المعادي الرئيسي",
-    address: "برج الأطباء - شارع 9 - المعادي - القاهرة",
-    phone: "+20 100 123 4567",
-    workingHours: "السبت إلى الخميس: 4:00 م - 10:00 م",
+    id: "branch-main-001",
+    name: "Main Branch",
+    nameAr: "الفرع الرئيسي",
+    address: "",
+    phone: "",
+    workingHours: "",
     isDefault: true,
-  },
-  {
-    id: "branch-nasrcity-002",
-    name: "Nasr City Branch",
-    nameAr: "فرع مدينة نصر",
-    address: "45 شارع عباس العقاد - أمام الحديقة الدولية - مدينة نصر",
-    phone: "+20 111 987 6543",
-    workingHours: "الأحد والأربعاء: 2:00 م - 8:00 م",
-    isDefault: false,
-  },
-  {
-    id: "branch-alex-003",
-    name: "Alexandria Center",
-    nameAr: "فرع الإسكندرية - سموحة",
-    address: "ميدان فيكتور عمانويل - برج الأطباء - سموحة - الإسكندرية",
-    phone: "+20 122 888 9900",
-    workingHours: "الجمعة: 1:00 م - 7:00 م",
-    isDefault: false,
   },
 ];
 
@@ -96,7 +78,23 @@ export const useClinicStore = create<ClinicStoreState>()(
       branches: INITIAL_BRANCHES,
 
       updateClinic: (updates) =>
-        set((state) => ({ clinic: { ...state.clinic, ...updates } })),
+        set((state) => {
+          const updatedClinic = { ...state.clinic, ...updates };
+          if (typeof window !== "undefined") {
+            try {
+              const { useSubscriptionStore } = require("@/store/useSubscriptionStore");
+              useSubscriptionStore
+                .getState()
+                .updateDoctorInfo(
+                  updatedClinic.doctorName || "",
+                  updatedClinic.nameAr || updatedClinic.name || ""
+                );
+            } catch {
+              // ignore sync errors
+            }
+          }
+          return { clinic: updatedClinic };
+        }),
 
       addBranch: (branchData) => {
         const newBranch: BranchInfo = {

@@ -108,9 +108,11 @@ export function AppShell({ children }: AppShellProps) {
                   v{getDisplayVersion(pkg.version)} PWA
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 hidden sm:block">
-                {clinic.name}
-              </p>
+              {clinic.name && (
+                <p className="text-[11px] text-slate-400 hidden sm:block">
+                  {clinic.name}
+                </p>
+              )}
             </div>
           </Link>
         </div>
@@ -147,15 +149,21 @@ export function AppShell({ children }: AppShellProps) {
           )}
 
           {/* User Profile Avatar */}
-          <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
-            <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-md">
-              Dr
+          {(clinic.doctorName || clinic.doctorTitle) && (
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
+              <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-md">
+                {clinic.doctorName ? (clinic.doctorName.startsWith("د.") || clinic.doctorName.toLowerCase().startsWith("dr") ? "Dr" : clinic.doctorName.charAt(0)) : "👤"}
+              </div>
+              <div className="hidden lg:block text-right">
+                {clinic.doctorName && (
+                  <div className="text-xs font-semibold text-slate-200">{clinic.doctorName.split("(")[0]}</div>
+                )}
+                {clinic.doctorTitle && (
+                  <div className="text-[10px] text-emerald-400 font-medium">{clinic.doctorTitle}</div>
+                )}
+              </div>
             </div>
-            <div className="hidden lg:block text-right">
-              <div className="text-xs font-semibold text-slate-200">{clinic.doctorName.split("(")[0]}</div>
-              <div className="text-[10px] text-emerald-400 font-medium">Consultant</div>
-            </div>
-          </div>
+          )}
         </div>
       </header>
 

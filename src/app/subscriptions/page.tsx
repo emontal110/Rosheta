@@ -279,8 +279,8 @@ export default function SubscriptionsPage() {
       senderPhone: senderPhone.trim() || "",
       transactionRef: transactionRef.trim() || `TRIAL-${Date.now().toString().slice(-6)}`,
       machineId: machineId,
-      doctorName: "",
-      clinicName: "",
+      doctorName: clinic.doctorName || "",
+      clinicName: clinic.nameAr || clinic.name || "",
       durationDays: selectedPlan.id === "annual_vip" ? 365 : selectedPlan.id === "semi_annual" ? 180 : selectedPlan.id === "quarterly" ? 90 : 30,
       isTrial: isTrialPlan,
     });

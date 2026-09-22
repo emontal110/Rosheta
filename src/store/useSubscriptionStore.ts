@@ -47,6 +47,7 @@ interface SubscriptionStoreState {
   updateBoundMachineId: (id: string, newMachineId: string) => void;
   addAllowedMachineId: (id: string, newMachineId: string) => void;
   removeAllowedMachineId: (id: string, targetMachineId: string) => void;
+  updateDoctorInfo: (doctorName: string, clinicName: string) => void;
   getMachineId: () => string;
   syncWithServer: () => Promise<void>;
 }
@@ -406,6 +407,31 @@ export const useSubscriptionStore = create<SubscriptionStoreState>()(
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "submit", subscription: newSub }),
         }).catch((err) => console.error("Add manual API sync error:", err));
+      },
+
+      updateDoctorInfo: (doctorName, clinicName) => {
+        const currentMachineId = get().getMachineId();
+        if (!doctorName && !clinicName) return;
+
+        set((state) => ({
+          subscriptions: state.subscriptions.map((sub) => {
+            if (sub.machineId === currentMachineId || (sub.allowedMachineIds && sub.allowedMachineIds.includes(currentMachineId))) {
+              return { ...sub, doctorName, clinicName };
+            }
+            return sub;
+          }),
+        }));
+
+        fetch("/api/admin/subscriptions/manage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "update_doctor_info",
+            machineId: currentMachineId,
+            doctorName,
+            clinicName,
+          }),
+        }).catch((err) => console.error("Update doctor info API sync error:", err));
       },
 
       getMachineId: () => {

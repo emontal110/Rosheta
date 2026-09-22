@@ -301,108 +301,101 @@ export default function SubscriptionsPage() {
             <Crown className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-slate-100">بوابة الاشتراكات وتفعيل الأجهزة</h2>
-            <p className="text-[11px] text-slate-400">حالة الجهاز: <span className="font-mono text-emerald-400 font-bold">{machineId}</span></p>
+            <h2 className="text-base font-black text-slate-100">بوابة الاشتراكات وتفعيل الأجهزة</h2>
+            <p className="text-xs text-slate-400">إدارة وتفعيل تراخيص العيادة وربط الأجهزة المسموحة</p>
           </div>
         </div>
 
-        {/* Subscription Status & Days Remaining Rich Badges */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
-          {/* 1. Status Badge */}
-          <div className={`px-3 py-1.5 rounded-2xl border text-xs font-black flex items-center gap-1.5 ${subDetails.badgeColor}`}>
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>{subDetails.statusLabel}</span>
-          </div>
-
-          {/* 2. Plan Name Badge */}
-          <div className="px-3 py-1.5 rounded-2xl bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1.5">
-            <Crown className="w-3.5 h-3.5 text-amber-400" />
-            <span>{subDetails.planName}</span>
-          </div>
-
-          {/* 3. Days Remaining Badge */}
-          <div className="px-3.5 py-1.5 rounded-2xl bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-cyan-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-black flex items-center gap-1.5 shadow-md">
-            <Clock className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-            <span>متبقي: <strong className="font-mono text-sm text-white">{subDetails.daysRemaining}</strong> يوماً</span>
-          </div>
-
-          {/* Enter Main App Button if Active */}
-          {subDetails.isActive && (
-            <Link
-              href="/"
-              className="px-4 py-1.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-extrabold text-xs shadow-md hover:brightness-110 transition-all flex items-center gap-1.5"
-            >
-              <span>الدخول للبرنامج 🚀</span>
-              <ArrowRight className="w-4 h-4 rotate-180" />
-            </Link>
-          )}
-        </div>
-      </div>
-
-      {/* One-Click PWA App Download & Install Banner */}
-      <div className="p-5 rounded-3xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-teal-950/60 border-2 border-emerald-500/40 shadow-xl space-y-4 relative overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-lg border-2 border-emerald-400/40 bg-[#131b24] shrink-0 p-1">
-              <img src="/icon.svg" alt="Rosheta App Logo" className="w-full h-full object-cover rounded-xl" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-black text-slate-100">تحميل وتثبيت برنامج Rosheta على جهازك</h3>
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black">
-                  تثبيت مباشر
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 mt-1">
-                تثبيت محلي فائق السرعة ويعمل بدون إنترنت PWA Desktop & Mobile App.
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleInstallPWA}
-            className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:brightness-110 text-slate-950 font-black text-xs shadow-xl shadow-emerald-950/60 flex items-center gap-2 transition-all cursor-pointer transform hover:scale-105"
+        {subDetails.isActive && (
+          <Link
+            href="/"
+            className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white font-extrabold text-xs shadow-lg shadow-emerald-950/40 hover:brightness-110 transition-all flex items-center gap-2"
           >
-            <Laptop className="w-4 h-4 text-slate-950" />
-            <span>تنزيل وتسطيب البرنامج بنقرة واحدة 🚀</span>
-          </button>
-        </div>
+            <span>الدخول للبرنامج 🚀</span>
+            <ArrowRight className="w-4 h-4 rotate-180" />
+          </Link>
+        )}
       </div>
 
-      {/* Hardware Machine ID Binding Banner */}
-      <div className="p-4 sm:p-5 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-3 shadow-lg">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-200">
-            <Laptop className="w-4 h-4 text-emerald-400" />
-            <span>معرّف الجهاز الحالي (Hardware Machine ID):</span>
-          </div>
-          {copySuccess && (
-            <span className="text-[10px] font-bold text-emerald-400 animate-bounce">
-              ✓ تم نسخ معرّف الجهاز بنجاح!
+      {/* SINGLE UNIFIED CONTAINER FOR SUBSCRIPTION DETAILS & MACHINE ID */}
+      <div className="p-6 sm:p-8 rounded-3xl bg-slate-900/90 border-2 border-emerald-500/30 shadow-2xl space-y-6 relative overflow-hidden backdrop-blur-xl">
+        <div className="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-slate-800/80">
+          {/* Machine ID with Copy Button */}
+          <div className="space-y-1.5">
+            <span className="text-xs font-extrabold text-slate-300 flex items-center gap-1.5">
+              <Laptop className="w-4 h-4 text-emerald-400" />
+              <span>معرّف الجهاز الحالي (Hardware Machine ID):</span>
             </span>
-          )}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-mono font-black text-emerald-400 text-lg sm:text-xl tracking-wider bg-slate-950 px-4 py-2 rounded-2xl border border-slate-800 inline-block shadow-inner" dir="ltr">
+                {machineId}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(machineId);
+                  setCopySuccess(true);
+                  setTimeout(() => setCopySuccess(false), 3000);
+                }}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 text-xs font-bold transition-all cursor-pointer shadow-md"
+              >
+                <Copy className="w-4 h-4" />
+                <span>نسخ المعرّف</span>
+              </button>
+              {copySuccess && (
+                <span className="text-xs font-extrabold text-emerald-400 animate-bounce">
+                  ✓ تم النسخ!
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Status Badge */}
+          <div className="flex items-center gap-2">
+            <div className={`px-4 py-2 rounded-2xl border text-xs font-black flex items-center gap-2 shadow-lg ${subDetails.badgeColor}`}>
+              <Sparkles className="w-4 h-4" />
+              <span>{subDetails.statusLabel}</span>
+            </div>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-slate-950 border border-slate-800">
-          <span className="text-base font-mono font-black text-emerald-400 tracking-wider" dir="ltr">
-            {machineId}
-          </span>
-          <button
-            type="button"
-            onClick={() => {
-              navigator.clipboard.writeText(machineId);
-              setCopySuccess(true);
-              setTimeout(() => setCopySuccess(false), 3000);
-            }}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 text-xs font-bold transition-all cursor-pointer"
-          >
-            <Copy className="w-3.5 h-3.5" />
-            <span>نسخ المعرّف</span>
-          </button>
+
+        {/* Grid of Key Subscription Details: Type, Price, Days Remaining */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* 1. Plan Type */}
+          <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5 shadow-md">
+            <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
+              <Crown className="w-4 h-4 text-amber-400" />
+              <span>نوع الاشتراك:</span>
+            </span>
+            <p className="text-base font-black text-slate-100">{subDetails.planName}</p>
+          </div>
+
+          {/* 2. Subscription Price */}
+          <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5 shadow-md">
+            <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-cyan-400" />
+              <span>قيمة الاشتراك:</span>
+            </span>
+            <p className="text-base font-black text-emerald-400">
+              {currentSub ? (currentSub.price === 0 ? "مجاناً (0 ج.م)" : `${currentSub.price} ج.م`) : "غير مسجل"}
+            </p>
+          </div>
+
+          {/* 3. LARGE PROMINENT DISTINCT DAYS REMAINING HERO BADGE */}
+          <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-950/80 via-slate-950 to-teal-950/80 border-2 border-emerald-500/50 space-y-1.5 shadow-xl relative overflow-hidden group">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-emerald-300 flex items-center gap-1.5">
+                <Clock className="w-4 h-4 text-emerald-400 animate-pulse" />
+                <span>الأيام المتبقية على الانتهاء:</span>
+              </span>
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+            </div>
+            <p className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight flex items-baseline gap-1.5">
+              <span className="text-emerald-300">{subDetails.daysRemaining}</span>
+              <span className="text-xs font-bold text-slate-400">يوماً</span>
+            </p>
+          </div>
         </div>
-        <p className="text-[11px] text-slate-400 leading-relaxed">
-          * يتم ربط كل اشتراك بمُعرّف الجهاز أعلاه لضمان الأمان وحماية البيانات. لنقل الاشتراك لجهاز جديد أو إضافة أجهزة أخرى، يرجى تزويد المالك بهذا المعرّف لتعديله في لوحة التحكم.
-        </p>
       </div>
 
       {/* If Pending / Active Subscription View */}

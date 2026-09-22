@@ -13,11 +13,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // In production, query Supabase DB for matching machineId or allowedMachineIds array
-    // Here we generate signature token for real-time security verification
-    const now = Date.now();
-    
-    // Server returns validation status and signed token
     return NextResponse.json({
       valid: true,
       machineId,

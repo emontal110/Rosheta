@@ -3,9 +3,9 @@
 import React, { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Crown, Lock, ShieldAlert, Copy, Check, ArrowRight, RefreshCw } from "lucide-react";
+import { Crown, Lock, ShieldAlert, Copy, Check, ArrowRight, RefreshCw, Fingerprint, Sparkles } from "lucide-react";
 import { useSubscriptionStore, getSubscriptionDetails } from "@/store/useSubscriptionStore";
-import { isBiometricSupported, isBiometricEnabled, authenticateWithBiometric } from "@/lib/biometricAuth";
+import { isBiometricSupported, isBiometricEnabled, authenticateWithBiometric, registerBiometricCredential } from "@/lib/biometricAuth";
 
 interface SubscriptionGuardProps {
   children: React.ReactNode;
@@ -14,13 +14,24 @@ interface SubscriptionGuardProps {
 export function SubscriptionGuard({ children }: SubscriptionGuardProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { subscriptions, machineId } = useSubscriptionStore();
+  const { subscriptions, machineId, syncWithServer } = useSubscriptionStore();
   const [copied, setCopied] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [biometricLoading, setBiometricLoading] = useState(false);
+  const [biometricStatus, setBiometricStatus] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Sync subscriptions with backend server periodically for instant Mobile <-> PC synchronization
+  useEffect(() => {
+    syncWithServer();
+    const syncInterval = setInterval(() => {
+      syncWithServer();
+    }, 4000);
+    return () => clearInterval(syncInterval);
+  }, [syncWithServer]);
 
   // Exempt routes from subscription locking
   const isExemptRoute =
@@ -42,6 +53,42 @@ export function SubscriptionGuard({ children }: SubscriptionGuardProps) {
     navigator.clipboard.writeText(machineId);
     setCopied(true);
     setTimeout(() => setCopied(false), 3000);
+  };
+
+  const handleBiometricAuth = async () => {
+    setBiometricLoading(true);
+    setBiometricStatus(null);
+    try {
+      const supported = await isBiometricSupported();
+      if (!supported) {
+        setBiometricStatus("جهازك أو المتصفح الحالي لا يدعم مستشعر البصمة أو Face ID.");
+        setBiometricLoading(false);
+        return;
+      }
+
+      const authRes = await authenticateWithBiometric();
+      if (authRes.success) {
+        await syncWithServer();
+        setBiometricStatus("✓ تم القراءة بالبصمة بنجاح! جاري التحديث...");
+      } else {
+        const wantsReg = confirm("لم يتم تسجيل البصمة مسبقاً على هذا الهاتف. هل تريد تسجيل البصمة / Face ID الآن؟");
+        if (wantsReg) {
+          const regRes = await registerBiometricCredential("طبيب العيادة");
+          if (regRes.success) {
+            await syncWithServer();
+            setBiometricStatus("✓ تم تسجيل بصمتك بنجاح! يمكنك الآن فتح التطبيق بالبصمة دائماً.");
+          } else {
+            setBiometricStatus(regRes.error || "تعذر تسجيل البصمة.");
+          }
+        } else {
+          setBiometricStatus(authRes.error || "تم إلغاء عملية البصمة.");
+        }
+      }
+    } catch (err: any) {
+      setBiometricStatus(err?.message || "خطأ في قراءة البصمة");
+    } finally {
+      setBiometricLoading(false);
+    }
   };
 
   // If on exempt route, render immediately
@@ -96,12 +143,28 @@ export function SubscriptionGuard({ children }: SubscriptionGuardProps) {
             </p>
           </div>
 
+          {/* Biometric Quick Login Action Button */}
+          <div className="p-4 rounded-2xl bg-slate-950 border border-emerald-500/30 space-y-2">
+            <button
+              type="button"
+              onClick={handleBiometricAuth}
+              disabled={biometricLoading}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:brightness-110 text-white font-extrabold text-xs shadow-lg flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-50"
+            >
+              <Fingerprint className="w-5 h-5 text-emerald-300" />
+              <span>{biometricLoading ? "جاري قراءة البصمة..." : "تسجيل الدخول بالبصمة / Face ID 👆"}</span>
+            </button>
+            {biometricStatus && (
+              <p className="text-[11px] font-bold text-amber-300 mt-1">{biometricStatus}</p>
+            )}
+          </div>
+
           {/* Machine Hardware ID Box for Binding */}
           <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800/90 text-right space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
                 <ShieldAlert className="w-4 h-4 text-emerald-400" />
-                <span>معرّف الجهاز الحلي (Hardware Machine ID):</span>
+                <span>معرّف الجهاز الحالي (Hardware Machine ID):</span>
               </span>
               {copied && <span className="text-[10px] font-bold text-emerald-400">✓ تم النسخ!</span>}
             </div>

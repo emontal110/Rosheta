@@ -48,10 +48,25 @@ interface SubscriptionStoreState {
   addAllowedMachineId: (id: string, newMachineId: string) => void;
   removeAllowedMachineId: (id: string, targetMachineId: string) => void;
   getMachineId: () => string;
+  syncWithServer: () => Promise<void>;
 }
 
 const generateMachineId = () => {
   return "RSH-" + Math.random().toString(36).substring(2, 6).toUpperCase() + "-" + Math.random().toString(36).substring(2, 6).toUpperCase();
+};
+
+const getStoredOrGeneratedMachineId = () => {
+  if (typeof window === "undefined") return "RSH-0000-0000";
+  try {
+    let stored = localStorage.getItem("rosheta_bound_machine_id");
+    if (!stored || stored === "RSH-0000-0000" || stored === "rh-0000-0000" || stored.startsWith("rh-0000") || stored.startsWith("RSH-0000")) {
+      stored = generateMachineId();
+      localStorage.setItem("rosheta_bound_machine_id", stored);
+    }
+    return stored;
+  } catch {
+    return generateMachineId();
+  }
 };
 
 export function getSubscriptionDetails(subscriptions: SubscriptionRecord[], machineId: string) {
@@ -149,20 +164,55 @@ export const useSubscriptionStore = create<SubscriptionStoreState>()(
     (set, get) => ({
       subscriptions: INITIAL_SUBSCRIPTIONS,
       activeSubscription: null,
-      machineId: "RSH-0000-0000",
+      machineId: typeof window !== "undefined" ? getStoredOrGeneratedMachineId() : "RSH-0000-0000",
+
+      syncWithServer: async () => {
+        try {
+          const res = await fetch("/api/admin/subscriptions/manage");
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && Array.isArray(data.subscriptions)) {
+              set((state) => {
+                const serverSubs: SubscriptionRecord[] = data.subscriptions;
+                const mergedMap = new Map<string, SubscriptionRecord>();
+                // Include existing local subs
+                state.subscriptions.forEach((s) => mergedMap.set(s.id, s));
+                // Override/Add server subs
+                serverSubs.forEach((s) => mergedMap.set(s.id, s));
+                return { subscriptions: Array.from(mergedMap.values()) };
+              });
+            }
+          }
+        } catch (err) {
+          console.error("Subscription store server sync error:", err);
+        }
+      },
 
       submitSubscriptionRequest: (data) => {
+        const boundMachineId = get().getMachineId();
+        const cleanMachineId = (data.machineId && data.machineId !== "RSH-0000-0000" && !data.machineId.startsWith("rh-0000")) 
+          ? data.machineId 
+          : boundMachineId;
+
         const newSub: SubscriptionRecord = {
           id: `sub-${Date.now()}`,
           status: "PENDING",
           createdAt: new Date().toISOString(),
           allowedMachineIds: [],
           ...data,
+          machineId: cleanMachineId,
         };
 
         set((state) => ({
           subscriptions: [newSub, ...state.subscriptions],
         }));
+
+        // Send to backend API so PC Admin portal picks it up immediately
+        fetch("/api/admin/subscriptions/manage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "submit", subscription: newSub }),
+        }).catch((err) => console.error("Submit API sync error:", err));
 
         return newSub;
       },
@@ -200,6 +250,13 @@ export const useSubscriptionStore = create<SubscriptionStoreState>()(
             activeSubscription: (activatedSub?.machineId === state.machineId || activatedSub?.allowedMachineIds?.includes(state.machineId)) ? activatedSub : state.activeSubscription,
           };
         });
+
+        // Notify backend server
+        fetch("/api/admin/subscriptions/manage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "activate", subscriptionId: id, durationDays }),
+        }).catch((err) => console.error("Activate API sync error:", err));
       },
 
       adjustSubscriptionDays: (id, daysDelta) => {
@@ -231,6 +288,13 @@ export const useSubscriptionStore = create<SubscriptionStoreState>()(
 
           return { subscriptions: updatedSubs };
         });
+
+        // Notify backend server
+        fetch("/api/admin/subscriptions/manage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "adjust_days", subscriptionId: id, daysDelta }),
+        }).catch((err) => console.error("Adjust days API sync error:", err));
       },
 
       updateBoundMachineId: (id, newMachineId) => {
@@ -248,6 +312,12 @@ export const useSubscriptionStore = create<SubscriptionStoreState>()(
             return sub;
           }),
         }));
+
+        fetch("/api/admin/subscriptions/manage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "update_machine_id", subscriptionId: id, newMachineId: cleanId }),
+        }).catch((err) => console.error("Update machine ID API sync error:", err));
       },
 
       addAllowedMachineId: (id, newMachineId) => {
@@ -287,18 +357,32 @@ export const useSubscriptionStore = create<SubscriptionStoreState>()(
             sub.id === id ? { ...sub, status: "SUSPENDED" as const } : sub
           ),
         }));
+
+        fetch("/api/admin/subscriptions/manage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "suspend", subscriptionId: id }),
+        }).catch((err) => console.error("Suspend API sync error:", err));
       },
 
       deleteSubscription: (id) => {
         set((state) => ({
           subscriptions: state.subscriptions.filter((sub) => sub.id !== id),
         }));
+
+        fetch("/api/admin/subscriptions/manage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "delete", subscriptionId: id }),
+        }).catch((err) => console.error("Delete API sync error:", err));
       },
 
       addManualSubscription: (data) => {
+        const boundMachineId = get().getMachineId();
+        const cleanMachineId = (data.machineId && data.machineId !== "RSH-0000-0000") ? data.machineId : boundMachineId;
         const expires = data.expiresAt || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
         const signatureToken = generateSubscriptionSignature(
-          data.machineId,
+          cleanMachineId,
           data.status || "ACTIVE",
           expires
         );
@@ -310,17 +394,24 @@ export const useSubscriptionStore = create<SubscriptionStoreState>()(
           expiresAt: expires,
           signatureToken,
           ...data,
+          machineId: cleanMachineId,
         };
 
         set((state) => ({
           subscriptions: [newSub, ...state.subscriptions],
         }));
+
+        fetch("/api/admin/subscriptions/manage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "submit", subscription: newSub }),
+        }).catch((err) => console.error("Add manual API sync error:", err));
       },
 
       getMachineId: () => {
         const state = get();
-        if (!state.machineId || state.machineId === "RSH-0000-0000") {
-          const newId = generateMachineId();
+        if (!state.machineId || state.machineId === "RSH-0000-0000" || state.machineId === "rh-0000-0000" || state.machineId.startsWith("rh-0000") || state.machineId.startsWith("RSH-0000")) {
+          const newId = getStoredOrGeneratedMachineId();
           set({ machineId: newId });
           return newId;
         }

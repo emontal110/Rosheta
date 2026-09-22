@@ -166,3 +166,27 @@ model PrescriptionItem {
 
   @@index([prescriptionId])
 }
+
+model Subscription {
+  id                String    @id @default(uuid())
+  planId            String
+  planName          String
+  price             Float
+  paymentMethod     String
+  senderPhone       String
+  transactionRef    String
+  status            String    @default("PENDING")
+  machineId         String
+  allowedMachineIds String[]  @default([])
+  doctorName        String?
+  clinicName        String?
+  durationDays      Int?      @default(30)
+  isTrial           Boolean?  @default(false)
+  activatedAt       DateTime?
+  expiresAt         DateTime?
+  signatureToken    String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([machineId])
+}

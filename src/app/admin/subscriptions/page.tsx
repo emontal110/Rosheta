@@ -46,6 +46,7 @@ export default function AdminSubscriptionsPortal() {
     updateBoundMachineId,
     addAllowedMachineId,
     removeAllowedMachineId,
+    syncWithServer,
   } = useSubscriptionStore();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,6 +60,7 @@ export default function AdminSubscriptionsPortal() {
   const [showAddManualModal, setShowAddManualModal] = useState(false);
   const [daysInputMap, setDaysInputMap] = useState<Record<string, number>>({});
   const [feedbackMap, setFeedbackMap] = useState<Record<string, string>>({});
+  const [globalToast, setGlobalToast] = useState<string | null>(null);
 
   // Manual Form States (Must be declared at top level of component)
   const [manualDoctor, setManualDoctor] = useState("");
@@ -67,6 +69,15 @@ export default function AdminSubscriptionsPortal() {
   const [manualPlanName, setManualPlanName] = useState("الاشتراك السنوي (VIP)");
   const [manualPrice, setManualPrice] = useState(1600);
   const [manualDuration, setManualDuration] = useState(365);
+
+  // Periodic server sync for instant mobile <-> PC admin portal real-time synchronization
+  useEffect(() => {
+    syncWithServer();
+    const syncInterval = setInterval(() => {
+      syncWithServer();
+    }, 3000);
+    return () => clearInterval(syncInterval);
+  }, [syncWithServer]);
 
   // Check Authentication on Mount
   useEffect(() => {
@@ -143,7 +154,209 @@ export default function AdminSubscriptionsPortal() {
 
   const handleActivateSubmit = (subId: string, days: number) => {
     activateSubscription(subId, days);
+    const subObj = subscriptions.find((s) => s.id === subId);
     setSelectedSubForActivate(null);
+    setGlobalToast(`✅ تم تفعيل اشتراك العيادة لكود الجهاز (${subObj?.machineId}) بنجاح لمدة ${days} يوماً! الاشتراك موجود الآن في تبويب (المفعلة / الكل).`);
+    setTimeout(() => setGlobalToast(null), 6000);
+  };
+
+  const handleDirectActivate = (sub: SubscriptionRecord) => {
+    const presetDays = sub.durationDays || 30;
+    activateSubscription(sub.id, presetDays);
+    setGlobalToast(`✅ تم تفعيل الاشتراك لكود الجهاز (${sub.machineId}) بنجاح لمدة ${presetDays} يوماً! الاشتراك متوفر الآن في قائمة الاشتراكات المفعلة.`);
+    setTimeout(() => setGlobalToast(null), 6000);
+  };
+
+  const renderSubscriptionRow = (sub: SubscriptionRecord) => {
+    const now = Date.now();
+    let daysRemaining = 0;
+    if (sub.expiresAt) {
+      const expireTime = new Date(sub.expiresAt).getTime();
+      daysRemaining = Math.max(0, Math.ceil((expireTime - now) / (1000 * 60 * 60 * 24)));
+    } else if (sub.activatedAt && sub.durationDays) {
+      const expireTime = new Date(sub.activatedAt).getTime() + sub.durationDays * 24 * 60 * 60 * 1000;
+      daysRemaining = Math.max(0, Math.ceil((expireTime - now) / (1000 * 60 * 60 * 24)));
+    } else {
+      daysRemaining = sub.durationDays || 30;
+    }
+
+    return (
+      <tr key={sub.id} className="hover:bg-slate-800/50 transition-colors border-b border-slate-800/40">
+        {/* 1. كود الجهاز (Machine ID) */}
+        <td className="p-4 space-y-1">
+          <div className="flex items-center gap-1.5">
+            <span className="font-mono text-xs font-black text-emerald-400 bg-slate-950 px-3 py-1 rounded-xl border border-slate-800 inline-block tracking-wider" dir="ltr">
+              {sub.machineId}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedSubForManage(sub);
+                setNewPrimaryMachineId(sub.machineId);
+              }}
+              className="p-1.5 rounded-lg bg-slate-800 hover:bg-emerald-600/30 text-emerald-400 border border-slate-700 hover:border-emerald-500/40 text-[10px] transition-colors"
+              title="تعديل كود الجهاز وإدارة الأجهزة المسموحة"
+            >
+              <Laptop className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          {sub.allowedMachineIds && sub.allowedMachineIds.length > 0 && (
+            <p className="text-[10px] text-purple-400 font-bold">
+              +{sub.allowedMachineIds.length} جهاز إضافي مسموح
+            </p>
+          )}
+        </td>
+
+        {/* 2. الباقة والقيمة */}
+        <td className="p-4 space-y-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="font-extrabold text-emerald-300 block">{sub.planName}</span>
+            {(sub.isTrial || sub.planId === "trial" || sub.price === 0 || (sub.planName && sub.planName.includes("تجريبي"))) && (
+              <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[10px] font-black shadow-sm">
+                🎁 اشتراك مجاني (تجريبي)
+              </span>
+            )}
+          </div>
+          <span className="font-mono text-slate-400 text-[11px]">
+            {sub.price === 0 ? "مجاناً (0 ج.م)" : `${sub.price} ج.م`}
+          </span>
+        </td>
+
+        {/* 3. وسيلة الدفع */}
+        <td className="p-4">
+          <div className="flex items-center gap-2">
+            {sub.paymentMethod === "vodafone" ? (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[11px] font-bold">
+                <div className="relative w-4 h-4">
+                  <Image src="/vodafone-cash.png" alt="VF" fill className="object-contain" />
+                </div>
+                <span>فودافون كاش</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 text-[11px] font-bold">
+                <div className="relative w-4 h-4">
+                  <Image src="/instapay.png" alt="Insta" fill className="object-contain" />
+                </div>
+                <span>إنستا باي</span>
+              </div>
+            )}
+          </div>
+        </td>
+
+        {/* 4. رقم العملية / المحول */}
+        <td className="p-4 space-y-0.5 font-mono">
+          <p className="text-emerald-400 font-bold">{sub.transactionRef}</p>
+          <p className="text-slate-400 text-[11px]">{sub.senderPhone}</p>
+        </td>
+
+        {/* 5. تاريخ الطلب / الانتهاء والمدة المتبقية */}
+        <td className="p-4 space-y-1 text-[11px]">
+          <p className="text-slate-400 font-medium">تاريخ الطلب: {new Date(sub.createdAt).toLocaleDateString("ar-EG")}</p>
+          {sub.expiresAt && (
+            <p className="text-slate-300 font-medium">ينتهي: {new Date(sub.expiresAt).toLocaleDateString("ar-EG")}</p>
+          )}
+          {sub.status === "ACTIVE" && (
+            <span className={`inline-block font-extrabold px-2.5 py-1 rounded-lg border text-[11px] shadow-sm ${
+              daysRemaining <= 5 
+                ? "bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse" 
+                : "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+            }`}>
+              متبقي: {daysRemaining} يوماً ⏳
+            </span>
+          )}
+          {sub.status === "PENDING" && (
+            <span className="inline-block font-bold px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px]">
+              بانتظار التفعيل ({sub.durationDays || 30} يوم)
+            </span>
+          )}
+          {sub.status === "EXPIRED" && (
+            <span className="inline-block font-black px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px]">
+              منتهي ⚠️
+            </span>
+          )}
+        </td>
+
+        {/* 6. الحالة */}
+        <td className="p-4">
+          {sub.status === "ACTIVE" && (
+            <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold flex items-center gap-1 w-max">
+              <CheckCircle2 className="w-3 h-3" />
+              <span>مفعل</span>
+            </span>
+          )}
+          {sub.status === "PENDING" && (
+            <span className="px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-extrabold flex items-center gap-1 w-max animate-pulse">
+              <Clock className="w-3 h-3" />
+              <span>قيد الانتظار</span>
+            </span>
+          )}
+          {sub.status === "SUSPENDED" && (
+            <span className="px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-extrabold flex items-center gap-1 w-max">
+              <Pause className="w-3 h-3" />
+              <span>موقوف</span>
+            </span>
+          )}
+        </td>
+
+        {/* 7. أدوات التحكم والإدارة */}
+        <td className="p-4">
+          <div className="flex items-center justify-center gap-2">
+            {/* Quick Direct Activation Button for Pending */}
+            {sub.status !== "ACTIVE" && (
+              <button
+                type="button"
+                onClick={() => handleDirectActivate(sub)}
+                className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-md transition-all flex items-center gap-1 cursor-pointer transform hover:scale-105"
+                title={`تفعيل مباشر بنفس مدة الباقة المحددة (${sub.durationDays || 30} يوم)`}
+              >
+                <Play className="w-3.5 h-3.5" />
+                <span>تفعيل الباقة المباشر ({sub.durationDays || 30} يوم) ⚡</span>
+              </button>
+            )}
+
+            {/* Days Adjuster & Manage Button (Available for Active/Existing) */}
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedSubForManage(sub);
+                setNewPrimaryMachineId(sub.machineId);
+              }}
+              className="px-2.5 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white font-bold text-[11px] border border-purple-500/30 transition-all flex items-center gap-1 cursor-pointer"
+              title="تعديل الأيام (+ / -) وإدارة الأجهزة"
+            >
+              <Sparkles className="w-3 h-3 text-purple-400" />
+              <span>إدارة الأيام والتفعيل</span>
+            </button>
+
+            {/* Suspend Button */}
+            {sub.status === "ACTIVE" && (
+              <button
+                type="button"
+                onClick={() => suspendSubscription(sub.id)}
+                className="p-1.5 rounded-xl bg-slate-800 hover:bg-amber-600/30 text-amber-400 border border-slate-700 hover:border-amber-500/40 transition-colors"
+                title="إيقاف مؤقت للاشتراك"
+              >
+                <Pause className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {/* Delete Button */}
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm("هل أنت تأكد من حذف هذا الاشتراك نهائياً ومسح كافة بياناته من المنظومة؟")) {
+                  deleteSubscription(sub.id);
+                }
+              }}
+              className="p-1.5 rounded-xl bg-slate-800 hover:bg-rose-600/30 text-rose-400 border border-slate-700 hover:border-rose-500/40 transition-colors"
+              title="حذف نهائي للمستند والاشتراك"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
   };
 
   const handleCreateManualSub = (e: React.FormEvent) => {
@@ -226,6 +439,19 @@ export default function AdminSubscriptionsPortal() {
           </button>
         </div>
       </div>
+
+      {/* Toast Notification Banner */}
+      {globalToast && (
+        <div className="p-4 rounded-2xl bg-emerald-500/20 border-2 border-emerald-500 text-emerald-200 text-xs font-black shadow-xl flex items-center justify-between animate-bounce">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            <span>{globalToast}</span>
+          </div>
+          <button onClick={() => setGlobalToast(null)} className="p-1 rounded-lg hover:bg-emerald-500/30 text-emerald-300">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Admin Statistics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -325,246 +551,85 @@ export default function AdminSubscriptionsPortal() {
           <table className="w-full text-right text-xs">
             <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-bold">
               <tr>
-                <th className="p-4">الطبيب / العيادة</th>
+                <th className="p-4">كود الجهاز (Machine ID)</th>
                 <th className="p-4">الباقة والقيمة</th>
                 <th className="p-4">وسيلة الدفع</th>
                 <th className="p-4">رقم العملية / المحول</th>
-                <th className="p-4">كود الجهاز (Machine ID)</th>
-                <th className="p-4">تاريخ الطلب / الانتهاء</th>
+                <th className="p-4">تاريخ الطلب / الانتهاء والمدة</th>
                 <th className="p-4">الحالة</th>
-                <th className="p-4 text-center">تعديل الأيام (+ / -)</th>
                 <th className="p-4 text-center">أدوات التحكم والإدارة</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 text-slate-200 font-medium">
               {filteredSubs.length > 0 ? (
-                filteredSubs.map((sub) => (
-                  <tr key={sub.id} className="hover:bg-slate-800/50 transition-colors">
-                    <td className="p-4 space-y-0.5">
-                      <p className="font-bold text-slate-100 flex items-center gap-1.5">
-                        <User className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>{sub.doctorName?.trim() || "بانتظار إضافة الاسم ⏳"}</span>
-                      </p>
-                      <p className="text-[11px] text-slate-400 flex items-center gap-1">
-                        <Building2 className="w-3.5 h-3.5 text-slate-500" />
-                        <span>{sub.clinicName?.trim() || "لم تسجل العيادة بعد"}</span>
-                      </p>
-                    </td>
-
-                    <td className="p-4 space-y-1">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-extrabold text-emerald-300 block">{sub.planName}</span>
-                        {(sub.isTrial || sub.planId === "trial" || sub.price === 0 || (sub.planName && sub.planName.includes("تجريبي"))) && (
-                          <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[10px] font-black shadow-sm">
-                            🎁 اشتراك مجاني (تجريبي)
-                          </span>
-                        )}
-                      </div>
-                      <span className="font-mono text-slate-400 text-[11px]">
-                        {sub.price === 0 ? "مجاناً (0 ج.م)" : `${sub.price} ج.م`}
-                      </span>
-                    </td>
-
-                    <td className="p-4">
-                      <div className="flex items-center gap-2">
-                        {sub.paymentMethod === "vodafone" ? (
-                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[11px] font-bold">
-                            <div className="relative w-4 h-4">
-                              <Image src="/vodafone-cash.png" alt="VF" fill className="object-contain" />
+                filterStatus === "ALL" ? (
+                  <>
+                    {/* 1. Pending Subscriptions Section */}
+                    {filteredSubs.filter((s) => s.status === "PENDING").length > 0 && (
+                      <>
+                        <tr className="bg-amber-500/10 border-y border-amber-500/30">
+                          <td colSpan={7} className="px-4 py-2.5">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+                              <span className="text-xs font-black text-amber-300">⏳ طلبات بانتظار التفعيل (Pending Requests)</span>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                                {filteredSubs.filter((s) => s.status === "PENDING").length}
+                              </span>
                             </div>
-                            <span>فودافون كاش</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 text-[11px] font-bold">
-                            <div className="relative w-4 h-4">
-                              <Image src="/instapay.png" alt="Insta" fill className="object-contain" />
+                          </td>
+                        </tr>
+                        {filteredSubs
+                          .filter((s) => s.status === "PENDING")
+                          .map((sub) => renderSubscriptionRow(sub))}
+                      </>
+                    )}
+
+                    {/* 2. Active Subscriptions Section */}
+                    {filteredSubs.filter((s) => s.status === "ACTIVE").length > 0 && (
+                      <>
+                        <tr className="bg-emerald-500/10 border-y border-emerald-500/30">
+                          <td colSpan={7} className="px-4 py-2.5">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                              <span className="text-xs font-black text-emerald-300">✅ الاشتراكات المفعلة (Active Subscriptions)</span>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">
+                                {filteredSubs.filter((s) => s.status === "ACTIVE").length}
+                              </span>
                             </div>
-                            <span>إنستا باي</span>
-                          </div>
-                        )}
-                      </div>
-                    </td>
+                          </td>
+                        </tr>
+                        {filteredSubs
+                          .filter((s) => s.status === "ACTIVE")
+                          .map((sub) => renderSubscriptionRow(sub))}
+                      </>
+                    )}
 
-                    <td className="p-4 space-y-0.5 font-mono">
-                      <p className="text-emerald-400 font-bold">{sub.transactionRef}</p>
-                      <p className="text-slate-400 text-[11px]">{sub.senderPhone}</p>
-                    </td>
-
-                    <td className="p-4 space-y-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono text-[11px] font-bold text-slate-200 bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800 inline-block">
-                          {sub.machineId}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedSubForManage(sub);
-                            setNewPrimaryMachineId(sub.machineId);
-                          }}
-                          className="p-1 rounded-lg bg-slate-800 hover:bg-emerald-600/30 text-emerald-400 border border-slate-700 hover:border-emerald-500/40 text-[10px] transition-colors"
-                          title="تعديل كود الجهاز وإدارة الأجهزة المسموحة"
-                        >
-                          <Laptop className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                      {sub.allowedMachineIds && sub.allowedMachineIds.length > 0 && (
-                        <p className="text-[10px] text-purple-400 font-bold">
-                          +{sub.allowedMachineIds.length} جهاز إضافي مسموح
-                        </p>
-                      )}
-                    </td>
-
-                    <td className="p-4 space-y-0.5 text-[11px]">
-                      <p className="text-slate-400">تاريخ: {new Date(sub.createdAt).toLocaleDateString("ar-EG")}</p>
-                      {sub.expiresAt && (
-                        <p className="text-emerald-400 font-bold">ينتهي: {new Date(sub.expiresAt).toLocaleDateString("ar-EG")}</p>
-                      )}
-                    </td>
-
-                    <td className="p-4">
-                      {sub.status === "ACTIVE" && (
-                        <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold flex items-center gap-1 w-max">
-                          <CheckCircle2 className="w-3 h-3" />
-                          <span>مفعل</span>
-                        </span>
-                      )}
-                      {sub.status === "PENDING" && (
-                        <span className="px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-extrabold flex items-center gap-1 w-max animate-pulse">
-                          <Clock className="w-3 h-3" />
-                          <span>قيد الانتظار</span>
-                        </span>
-                      )}
-                      {sub.status === "SUSPENDED" && (
-                        <span className="px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-extrabold flex items-center gap-1 w-max">
-                          <Pause className="w-3 h-3" />
-                          <span>موقوف</span>
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Inline Days Adjustment (+ / - Days Input & Edit Button) */}
-                    <td className="p-4">
-                      <div className="flex items-center justify-center gap-1.5 bg-slate-950/90 p-1.5 rounded-2xl border border-purple-500/30 shadow-inner">
-                        <input
-                          type="number"
-                          placeholder="+/- أيام"
-                          value={daysInputMap[sub.id] !== undefined ? daysInputMap[sub.id] : ""}
-                          onChange={(e) => {
-                            const val = e.target.value === "" ? 0 : Number(e.target.value);
-                            setDaysInputMap((prev) => ({ ...prev, [sub.id]: val }));
-                          }}
-                          className="w-16 px-2 py-1 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono font-bold text-slate-100 text-center focus:outline-none focus:border-purple-500 placeholder:text-slate-600"
-                        />
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            const delta = daysInputMap[sub.id];
-                            if (delta === undefined || delta === 0 || isNaN(delta)) {
-                              alert("يرجى إدخال عدد الأيام المراد إضافتها (مثل +30) أو خصمها (مثل -5).");
-                              return;
-                            }
-
-                            // 1. Update local Zustand state & re-sign signature token
-                            adjustSubscriptionDays(sub.id, delta);
-
-                            // 2. Sync with Database & Admin API backend
-                            try {
-                              await fetch("/api/admin/subscriptions/manage", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                  action: "adjust_days",
-                                  subscriptionId: sub.id,
-                                  machineId: sub.machineId,
-                                  daysDelta: delta,
-                                }),
-                              });
-                            } catch (err) {
-                              console.error("Backend sync notification:", err);
-                            }
-
-                            setFeedbackMap((prev) => ({
-                              ...prev,
-                              [sub.id]: delta > 0 ? `+${delta} يوم ✓` : `${delta} يوم ✓`,
-                            }));
-
-                            setTimeout(() => {
-                              setFeedbackMap((prev) => ({ ...prev, [sub.id]: "" }));
-                            }, 3000);
-                          }}
-                          className="px-2.5 py-1 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:brightness-110 text-white font-extrabold text-[11px] shadow-md transition-all cursor-pointer shrink-0 flex items-center gap-1"
-                        >
-                          <span>تعديل</span>
-                          <Sparkles className="w-3 h-3 text-purple-300" />
-                        </button>
-                      </div>
-                      {feedbackMap[sub.id] && (
-                        <p className="text-[10px] text-center font-bold text-emerald-400 mt-1 animate-bounce">
-                          {feedbackMap[sub.id]}
-                        </p>
-                      )}
-                    </td>
-
-                    <td className="p-4">
-                      <div className="flex items-center justify-center gap-2">
-                        {/* Days Adjuster & Manage Button */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedSubForManage(sub);
-                            setNewPrimaryMachineId(sub.machineId);
-                          }}
-                          className="px-2.5 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white font-bold text-[11px] border border-purple-500/30 transition-all flex items-center gap-1 cursor-pointer"
-                          title="تعديل الأيام (+ / -) وإدارة الأجهزة"
-                        >
-                          <Sparkles className="w-3 h-3 text-purple-400" />
-                          <span>إدارة الأيام والتفعيل</span>
-                        </button>
-
-                        {/* Quick Activation Button */}
-                        {sub.status !== "ACTIVE" && (
-                          <button
-                            type="button"
-                            onClick={() => setSelectedSubForActivate(sub)}
-                            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] shadow-md transition-all flex items-center gap-1 cursor-pointer"
-                          >
-                            <Play className="w-3 h-3" />
-                            <span>تفعيل الباقة</span>
-                          </button>
-                        )}
-
-                        {/* Suspend Button */}
-                        {sub.status === "ACTIVE" && (
-                          <button
-                            type="button"
-                            onClick={() => suspendSubscription(sub.id)}
-                            className="p-1.5 rounded-xl bg-slate-800 hover:bg-amber-600/30 text-amber-400 border border-slate-700 hover:border-amber-500/40 transition-colors"
-                            title="إيقاف مؤقت للاشتراك"
-                          >
-                            <Pause className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-
-                        {/* Delete Button */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (confirm("هل أنت تأكد من حذف هذا الاشتراك نهائياً ومسح كافة بياناته من المنظومة؟")) {
-                              deleteSubscription(sub.id);
-                            }
-                          }}
-                          className="p-1.5 rounded-xl bg-slate-800 hover:bg-rose-600/30 text-rose-400 border border-slate-700 hover:border-rose-500/40 transition-colors"
-                          title="حذف نهائي للمستند والاشتراك"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                    {/* 3. Free Trial / Suspended / Expired Section */}
+                    {filteredSubs.filter((s) => s.status !== "PENDING" && s.status !== "ACTIVE").length > 0 && (
+                      <>
+                        <tr className="bg-purple-500/10 border-y border-purple-500/30">
+                          <td colSpan={7} className="px-4 py-2.5">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full bg-purple-400" />
+                              <span className="text-xs font-black text-purple-300">🎁 الاشتراكات المجانية / المعلقة / المنتهية</span>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30">
+                                {filteredSubs.filter((s) => s.status !== "PENDING" && s.status !== "ACTIVE").length}
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                        {filteredSubs
+                          .filter((s) => s.status !== "PENDING" && s.status !== "ACTIVE")
+                          .map((sub) => renderSubscriptionRow(sub))}
+                      </>
+                    )}
+                  </>
+                ) : (
+                  filteredSubs.map((sub) => renderSubscriptionRow(sub))
+                )
               ) : (
                 <tr>
-                  <td colSpan={9} className="p-8 text-center text-slate-400 font-bold">
+                  <td colSpan={7} className="p-8 text-center text-slate-400 font-bold">
                     لا توجد طلبات اشتراك مطابقة للبحث الحالي.
                   </td>
                 </tr>

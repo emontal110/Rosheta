@@ -61,6 +61,14 @@ export default function AdminSubscriptionsPortal() {
   const [daysInputMap, setDaysInputMap] = useState<Record<string, number>>({});
   const [feedbackMap, setFeedbackMap] = useState<Record<string, string>>({});
   const [globalToast, setGlobalToast] = useState<string | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    action: () => void;
+    confirmLabel: string;
+    confirmColor: "rose" | "amber" | "emerald";
+  } | null>(null);
 
   // Manual Form States (Must be declared at top level of component)
   const [manualDoctor, setManualDoctor] = useState("");
@@ -310,7 +318,7 @@ export default function AdminSubscriptionsPortal() {
                 title={`تفعيل مباشر بنفس مدة الباقة المحددة (${sub.durationDays || 30} يوم)`}
               >
                 <Play className="w-3.5 h-3.5" />
-                <span>تفعيل الباقة المباشر ({sub.durationDays || 30} يوم) ⚡</span>
+                <span>تفعيل</span>
               </button>
             )}
 
@@ -325,14 +333,28 @@ export default function AdminSubscriptionsPortal() {
               title="تعديل الأيام (+ / -) وإدارة الأجهزة"
             >
               <Sparkles className="w-3 h-3 text-purple-400" />
-              <span>إدارة الأيام والتفعيل</span>
+              <span>إدارة</span>
             </button>
 
-            {/* Suspend Button */}
+            {/* Suspend Button with Custom Confirmation */}
             {sub.status === "ACTIVE" && (
               <button
                 type="button"
-                onClick={() => suspendSubscription(sub.id)}
+                onClick={() => {
+                  setConfirmModal({
+                    show: true,
+                    title: "تأكيد إيقاف الاشتراك ⛔",
+                    message: `هل أنت تأكد من إيقاف اشتراك الجهاز (${sub.machineId}) مؤقتاً؟`,
+                    confirmLabel: "نعم، إيقاف الاشتراك",
+                    confirmColor: "amber",
+                    action: () => {
+                      suspendSubscription(sub.id);
+                      setGlobalToast(`⛔ تم إيقاف الاشتراك لكود الجهاز (${sub.machineId}) مؤقتاً.`);
+                      setTimeout(() => setGlobalToast(null), 5000);
+                      setConfirmModal(null);
+                    },
+                  });
+                }}
                 className="p-1.5 rounded-xl bg-slate-800 hover:bg-amber-600/30 text-amber-400 border border-slate-700 hover:border-amber-500/40 transition-colors"
                 title="إيقاف مؤقت للاشتراك"
               >
@@ -340,13 +362,23 @@ export default function AdminSubscriptionsPortal() {
               </button>
             )}
 
-            {/* Delete Button */}
+            {/* Delete Button with Custom Confirmation */}
             <button
               type="button"
               onClick={() => {
-                if (confirm("هل أنت تأكد من حذف هذا الاشتراك نهائياً ومسح كافة بياناته من المنظومة؟")) {
-                  deleteSubscription(sub.id);
-                }
+                setConfirmModal({
+                  show: true,
+                  title: "تأكيد حذف الاشتراك 🗑️",
+                  message: `هل أنت تأكد من رغبتك في حذف هذا الاشتراك نهائياً وكافة بياناته لكود الجهاز (${sub.machineId})؟ لا يمكن التراجع عن هذا الإجراء.`,
+                  confirmLabel: "نعم، تأكيد الحذف النهائي",
+                  confirmColor: "rose",
+                  action: () => {
+                    deleteSubscription(sub.id);
+                    setGlobalToast(`🗑️ تم حذف الاشتراك لكود الجهاز (${sub.machineId}) بنجاح.`);
+                    setTimeout(() => setGlobalToast(null), 5000);
+                    setConfirmModal(null);
+                  },
+                });
               }}
               className="p-1.5 rounded-xl bg-slate-800 hover:bg-rose-600/30 text-rose-400 border border-slate-700 hover:border-rose-500/40 transition-colors"
               title="حذف نهائي للمستند والاشتراك"
@@ -1036,6 +1068,55 @@ export default function AdminSubscriptionsPortal() {
                 className="w-full py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition-all"
               >
                 إغلاق النافذة
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Confirmation Modal (Replaces Native Browser confirm / alert) */}
+      {confirmModal && confirmModal.show && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 dir-rtl">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-5 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <button
+              onClick={() => setConfirmModal(null)}
+              className="absolute top-4 right-4 p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="space-y-2 text-right">
+              <div className="flex items-center gap-2">
+                {confirmModal.confirmColor === "rose" && <Trash2 className="w-6 h-6 text-rose-400" />}
+                {confirmModal.confirmColor === "amber" && <Pause className="w-6 h-6 text-amber-400" />}
+                {confirmModal.confirmColor === "emerald" && <Sparkles className="w-6 h-6 text-emerald-400" />}
+                <h3 className="text-lg font-black text-slate-100">{confirmModal.title}</h3>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                {confirmModal.message}
+              </p>
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmModal(null)}
+                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all cursor-pointer"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={confirmModal.action}
+                className={`px-5 py-2.5 rounded-xl text-white text-xs font-black shadow-lg transition-all cursor-pointer ${
+                  confirmModal.confirmColor === "rose"
+                    ? "bg-rose-600 hover:bg-rose-500 shadow-rose-950/50"
+                    : confirmModal.confirmColor === "amber"
+                    ? "bg-amber-600 hover:bg-amber-500 shadow-amber-950/50"
+                    : "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-950/50"
+                }`}
+              >
+                {confirmModal.confirmLabel}
               </button>
             </div>
           </div>

@@ -248,6 +248,10 @@ CREATE TABLE IF NOT EXISTS "Subscription" (
 
 CREATE INDEX IF NOT EXISTS "Subscription_machineId_idx" ON "Subscription"("machineId");
 
+-- Ensure doctorName and clinicName columns exist on existing Subscription table in Supabase
+ALTER TABLE "Subscription" ADD COLUMN IF NOT EXISTS "doctorName" TEXT;
+ALTER TABLE "Subscription" ADD COLUMN IF NOT EXISTS "clinicName" TEXT;
+
 -- Seed Admin User and System Clinic in Database
 INSERT INTO "Clinic" ("id", "name", "specialty", "primaryColor", "updatedAt")
 VALUES ('clinic-admin-001', 'Rosheta System Administration', 'System Administration', '#059669', NOW())

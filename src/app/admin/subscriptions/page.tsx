@@ -246,18 +246,19 @@ export default function AdminSubscriptionsPortal() {
             {sub.paymentMethod === "vodafone" ? (
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[11px] font-bold">
                 <div className="relative w-4 h-4">
-                  <Image src="/vodafone-cash.png" alt="VF" fill className="object-contain" />
+                  <Image src="/vodafone-cash.png" alt="VF" fill priority={true} unoptimized={true} className="object-contain" />
                 </div>
                 <span>فودافون كاش</span>
               </div>
             ) : (
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 text-[11px] font-bold">
                 <div className="relative w-4 h-4">
-                  <Image src="/instapay.png" alt="Insta" fill className="object-contain" />
+                  <Image src="/instapay.png" alt="Insta" fill priority={true} unoptimized={true} className="object-contain" />
                 </div>
                 <span>إنستا باي</span>
               </div>
             )}
+
           </div>
         </td>
 

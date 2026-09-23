@@ -19,12 +19,17 @@ import {
   QrCode,
   ShieldAlert,
   Crown,
+  Smartphone,
+  LayoutDashboard,
+  History,
 } from "lucide-react";
+
 import { useClinicStore } from "@/store/useClinicStore";
 import { usePrescriptionStore } from "@/store/usePrescriptionStore";
 import { useSubscriptionStore, getSubscriptionDetails } from "@/store/useSubscriptionStore";
 import { SubscriptionGuard } from "@/components/auth/SubscriptionGuard";
-import { PwaInstallPromptModal } from "@/components/common/PwaInstallPromptModal";
+import { AppDownloadModal } from "@/components/common/AppDownloadModal";
+
 import { autoCheckAndCleanCache } from "@/lib/CacheManager";
 import { initPrescriptionSyncAutoListener } from "@/lib/PrescriptionSyncQueue";
 import pkg from "../../../package.json";
@@ -47,13 +52,20 @@ export function AppShell({ children }: AppShellProps) {
   const { selectedBranchId, setSelectedBranchId, items, aiInteractions } = usePrescriptionStore();
   const { subscriptions, machineId } = useSubscriptionStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [downloadModalOpen, setDownloadModalOpen] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   React.useEffect(() => {
     setMounted(true);
+    if (typeof window !== "undefined") {
+      const isPwa = window.matchMedia("(display-mode: standalone)").matches || (window.navigator as any).standalone;
+      setIsStandalone(!!isPwa);
+    }
     autoCheckAndCleanCache();
     initPrescriptionSyncAutoListener();
   }, []);
+
 
   const subDetails = getSubscriptionDetails(subscriptions, machineId);
 
@@ -72,17 +84,21 @@ export function AppShell({ children }: AppShellProps) {
   const daysDisplay = mounted ? `${subDetails.daysRemaining}d` : "0d";
 
   const navLinks = [
-    { href: "/", label: "Prescription Builder", icon: FileText, badge: items.length },
-    { href: "/patients", label: "Patients Catalog", icon: Users },
-    { href: "/drugs", label: "Egyptian Drug Bank", icon: Pill, badge: "43k+" },
-    { href: "/settings", label: "Clinic setting", icon: Building2 },
-    { href: "/subscriptions", label: "Subscriptions", icon: Crown, badge: `⏳ ${daysDisplay}` },
+    { href: "/", label: "لوحة التحكم الطبية", icon: LayoutDashboard },
+    { href: "/prescriptions/new", label: "كتابة روشتة جديدة", icon: FileText, badge: items.length },
+    { href: "/history", label: "أرشيف الروشتات", icon: History },
+    { href: "/patients", label: "سجل المرضى", icon: Users },
+    { href: "/branches", label: "الفروع والعيادات", icon: Building2 },
+    { href: "/settings", label: "إعدادات العيادة", icon: Settings },
+    { href: "/subscriptions", label: "الاشتراكات والتفعيل", icon: Crown, badge: `⏳ ${daysDisplay}` },
   ];
+
 
   return (
     <div className="min-h-screen bg-[#070c1e] text-slate-100 flex flex-col antialiased selection:bg-emerald-500 selection:text-white">
-      {/* 10-Second Auto-Expiring PWA Installation Popup Modal */}
-      <PwaInstallPromptModal />
+      <AppDownloadModal isOpen={downloadModalOpen} onClose={() => setDownloadModalOpen(false)} />
+
+
 
       {/* Top Navbar */}
       <header className="sticky top-0 z-40 bg-[#0f172a]/90 backdrop-blur-md border-b border-slate-800/80 px-4 lg:px-8 py-3 flex items-center justify-between no-print">
@@ -96,16 +112,16 @@ export function AppShell({ children }: AppShellProps) {
 
           {/* Logo & Brand Name */}
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg border border-emerald-500/30 transition-transform group-hover:scale-105 bg-[#131b24] shrink-0">
-              <img src="/icon.svg" alt="Rosheta Logo" className="w-full h-full object-cover" />
+            <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg border border-emerald-500/40 transition-transform group-hover:scale-105 bg-slate-950 shrink-0">
+              <img src="/logo-penrx.jpg" alt="PenRx+ Logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-extrabold text-xl tracking-wide bg-gradient-to-r from-emerald-400 via-teal-200 to-cyan-300 bg-clip-text text-transparent">
-                  Rosheta
+                <span className="font-black text-xl tracking-wide bg-gradient-to-r from-emerald-400 via-teal-200 to-cyan-300 bg-clip-text text-transparent" dir="ltr">
+                  PenRx+
                 </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  v{getDisplayVersion(pkg.version)} PWA
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">
+                  v{getDisplayVersion(pkg.version)} Pro
                 </span>
               </div>
               {clinic.name && (
@@ -116,6 +132,8 @@ export function AppShell({ children }: AppShellProps) {
             </div>
           </Link>
         </div>
+
+
 
         {/* Doctor Quick Info & Alerts */}
         <div className="flex items-center gap-3">
@@ -148,7 +166,26 @@ export function AppShell({ children }: AppShellProps) {
             </div>
           )}
 
+          {/* App Download Button (Hidden inside Standalone App) */}
+          {!isStandalone && (
+            <button
+              onClick={() => setDownloadModalOpen(true)}
+              className="relative group overflow-hidden flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:border-emerald-400/60 text-xs font-bold transition-all duration-300 shadow-lg shadow-emerald-950/20 active:scale-95 cursor-pointer backdrop-blur-md"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <Smartphone className="w-4 h-4 text-emerald-300 group-hover:scale-110 transition-transform" />
+              <span className="hidden sm:inline bg-gradient-to-r from-slate-100 via-emerald-200 to-cyan-200 bg-clip-text text-transparent font-extrabold">
+                تطبيق الهواتف 📲
+              </span>
+            </button>
+          )}
+
+
           {/* User Profile Avatar */}
+
           {(clinic.doctorName || clinic.doctorTitle) && (
             <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
               <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-md">

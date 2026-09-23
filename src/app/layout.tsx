@@ -5,9 +5,9 @@ import { AppShell } from "@/components/layout/AppShell";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://rosheta-iota.vercel.app"),
-  title: "Rosheta (روشتة) - Egyptian Medical Prescription Platform",
+  title: "PenRx+ (بن آر إكس +) - Medical Prescription & Clinic Platform",
   description:
-    "Next.js PWA Medical Prescription Application for Egyptian Human Clinics, Dental, Aesthetics, and Specialty Centers with 43,500+ Egyptian drug bank search, AI interaction assist, and A4/A5 print sharing.",
+    "تطبيق PenRx+ (بن آر إكس +) لإدارة العيادات الطبية، كتابة الروشتات، بنك الأدوية المصري، وفحص التفاعلات بالذكاء الاصطناعي على الأندرويد والآيفون والويب.",
   manifest: "/manifest.json",
   icons: {
     icon: [
@@ -22,16 +22,16 @@ export const metadata: Metadata = {
     ],
   },
   openGraph: {
-    title: "Rosheta (روشتة) - منصة الروشتة الطبية الذكية",
-    description: "تطبيق روشتة لإدارة العيادات الطبية والبحث في دليل الأدوية المصرية وتفعيل الاشتراكات.",
+    title: "PenRx+ (بن آر إكس +) - منصة الروشتة الطبية الذكية",
+    description: "تطبيق PenRx+ لإدارة العيادات الطبية والبحث في دليل الأدوية وتفعيل الاشتراكات.",
     url: "https://rosheta-iota.vercel.app",
-    siteName: "Rosheta Medical Platform",
+    siteName: "PenRx+ Platform",
     images: [
       {
         url: "https://rosheta-iota.vercel.app/icon-512.png",
         width: 512,
         height: 512,
-        alt: "Rosheta Medical App Logo",
+        alt: "PenRx+ Medical App Logo",
         type: "image/png",
       },
     ],
@@ -40,8 +40,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Rosheta (روشتة)",
-    description: "منصة الروشتة الطبية الذكية للعيادات والمراكز الطبية في مصر",
+    title: "PenRx+ (بن آر إكس +)",
+    description: "منصة الروشتة الطبية الذكية للعيادات والمراكز الطبية",
     images: ["https://rosheta-iota.vercel.app/icon-512.png"],
   },
   other: {
@@ -50,9 +50,10 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Rosheta Medical",
+    title: "PenRx+ Medical",
   },
 };
+
 
 export const viewport: Viewport = {
   themeColor: "#131b24",

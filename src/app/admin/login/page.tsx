@@ -51,10 +51,10 @@ export default function AdminLoginPage() {
 
       setSuccessMsg("تم تسجيل الدخول بنجاح! جاري تحويلك لبورتال التفعيل...");
       setTimeout(() => {
-        router.push("/admin/subscriptions");
-        router.refresh();
-      }, 600);
+        window.location.href = "/admin/subscriptions";
+      }, 200);
     } catch (err: any) {
+
       setErrorMsg(err.message || "حدث خطأ غير متوقع.");
     } finally {
       setLoading(false);

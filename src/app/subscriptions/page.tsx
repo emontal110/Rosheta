@@ -45,8 +45,11 @@ interface SubscriptionPlan {
   isTrial?: boolean;
 }
 
+import { useRouter } from "next/navigation";
+
 export default function SubscriptionsPage() {
-  const { subscriptions, submitSubscriptionRequest, machineId } = useSubscriptionStore();
+  const router = useRouter();
+  const { subscriptions, submitSubscriptionRequest, machineId, syncWithServer } = useSubscriptionStore();
   const { clinic } = useClinicStore();
 
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
@@ -63,6 +66,26 @@ export default function SubscriptionsPage() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const subDetails = getSubscriptionDetails(subscriptions, machineId);
+
+  // Auto-redirect to Dashboard (/) the moment subscription is ACTIVE
+  useEffect(() => {
+    if (mounted && subDetails.isActive) {
+      router.replace("/");
+    }
+  }, [mounted, subDetails.isActive, router]);
+
+  // Sync with server every 3 seconds while pending
+  useEffect(() => {
+    if (subDetails.isPending || isPendingView) {
+      const interval = setInterval(() => {
+        syncWithServer();
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [subDetails.isPending, isPendingView, syncWithServer]);
+
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
@@ -290,9 +313,8 @@ export default function SubscriptionsPage() {
     setSelectedPlan(null);
   };
 
-  const subDetails = getSubscriptionDetails(subscriptions, machineId);
-
   return (
+
     <div className="max-w-7xl mx-auto space-y-12 pb-16">
       {/* Subscriptions Header Banner */}
       <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900/80 border border-slate-800 p-4 sm:p-5 rounded-3xl backdrop-blur-md shadow-lg">
@@ -677,6 +699,8 @@ export default function SubscriptionsPage() {
                     src="/vodafone-cash.png"
                     alt="Vodafone Cash"
                     fill
+                    priority={true}
+                    unoptimized={true}
                     className="object-contain"
                   />
                 </div>
@@ -698,11 +722,14 @@ export default function SubscriptionsPage() {
                     src="/instapay.png"
                     alt="InstaPay"
                     fill
+                    priority={true}
+                    unoptimized={true}
                     className="object-contain"
                   />
                 </div>
                 <span className="text-xs font-extrabold">إنستا باي (InstaPay)</span>
               </button>
+
             </div>
 
             {/* Account Transfer Box with Copy Number Button */}

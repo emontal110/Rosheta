@@ -1,12 +1,11 @@
 @echo off
 chcp 65001 > nul
-title Rosheta Medical Prescription Application
+title PenRx+ Application
 
-REM Set working directory to batch script location
 cd /d "%~dp0"
 
 echo =========================================================
-echo       نظام روشتة الطبية (Rosheta PWA)
+echo       منظومة PenRx+ الطبية المتكاملة
 echo =========================================================
 echo.
 
@@ -15,10 +14,10 @@ for /f "tokens=5" %%a in ('netstat -aon ^| findstr :3000 ^| findstr LISTENING') 
     taskkill /F /PID %%a >nul 2>&1
 )
 
-echo  [2] فتح المتصفح تلقائياً على http://localhost:3000 ...
-start http://localhost:3000
+echo  [2] فحص جاهزية السيرفر وفتح المتصفح تلقائياً...
+start "" powershell -NoProfile -ExecutionPolicy Bypass -Command "$ready=$false; for($i=0; $i -lt 30; $i++) { Start-Sleep -s 1; try { $client = New-Object System.Net.Sockets.TcpClient('127.0.0.1', 3000); if ($client.Connected) { $ready=$true; $client.Close(); break } } catch {} }; cmd /c start http://localhost:3000"
 
-echo  [3] تشغيل السيرفر المحتفظ بالكاش للبدء السريع...
+echo  [3] تشغيل السيرفر المحلي...
 echo =========================================================
 echo.
 

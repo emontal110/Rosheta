@@ -1,6 +1,7 @@
 {
-  "short_name": "Rosheta",
-  "name": "Rosheta (روشتة) Medical Prescription Platform",
+  "short_name": "PenRx+",
+  "name": "PenRx+ (بن آر إكس +) Medical Prescription Platform",
+
   "icons": [
     {
       "src": "/icon.svg",

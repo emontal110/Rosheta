@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { hashPassword, verifyPassword, createAdminSessionToken, ADMIN_COOKIE_NAME } from "@/lib/auth";
 
-const prisma = new PrismaClient();
 
 const ADMIN_EMAIL = "emontal.33@gmail.com";
 const ADMIN_PASSWORD_RAW = "EMOmoro30630";

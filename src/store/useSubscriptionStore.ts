@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { generateSubscriptionSignature, verifySubscriptionSignature, checkSystemClockRollback } from "@/lib/subscriptionAuth";
+import { getHardwareDeviceId } from "@/lib/deviceId";
 
 export interface SubscriptionRecord {
   id: string;
@@ -53,22 +54,31 @@ interface SubscriptionStoreState {
 }
 
 const generateMachineId = () => {
-  return "RSH-" + Math.random().toString(36).substring(2, 6).toUpperCase() + "-" + Math.random().toString(36).substring(2, 6).toUpperCase();
+  return "PRX-" + Math.random().toString(36).substring(2, 6).toUpperCase() + "-" + Math.random().toString(36).substring(2, 6).toUpperCase();
 };
 
 const getStoredOrGeneratedMachineId = () => {
-  if (typeof window === "undefined") return "RSH-0000-0000";
+  if (typeof window === "undefined") return "PRX-0000-0000";
   try {
-    let stored = localStorage.getItem("rosheta_bound_machine_id");
-    if (!stored || stored === "RSH-0000-0000" || stored === "rh-0000-0000" || stored.startsWith("rh-0000") || stored.startsWith("RSH-0000")) {
-      stored = generateMachineId();
-      localStorage.setItem("rosheta_bound_machine_id", stored);
+    let storedPrx = localStorage.getItem("penrx_device_hardware_id");
+    let storedLegacy = localStorage.getItem("rosheta_bound_machine_id");
+
+    if (storedPrx && !storedPrx.includes("0000-0000")) {
+      return storedPrx;
     }
-    return stored;
+    if (storedLegacy && !storedLegacy.includes("0000-0000") && !storedLegacy.startsWith("rh-0000") && !storedLegacy.startsWith("RSH-0000")) {
+      return storedLegacy;
+    }
+
+    const newId = generateMachineId();
+    localStorage.setItem("penrx_device_hardware_id", newId);
+    return newId;
   } catch {
     return generateMachineId();
   }
 };
+
+
 
 export function getSubscriptionDetails(subscriptions: SubscriptionRecord[], machineId: string) {
   // Find subscription matching either primary machineId or listed in allowedMachineIds
@@ -78,17 +88,18 @@ export function getSubscriptionDetails(subscriptions: SubscriptionRecord[], mach
 
   if (!currentSub) {
     return {
-      status: "UNREGISTERED",
-      statusLabel: "غير مسجل / غير مفعّل 🔒",
-      badgeColor: "bg-slate-800 text-slate-400 border-slate-700",
-      planName: "لا يوجد اشتراك مفعّل",
-      daysRemaining: 0,
-      isExpired: true,
+      status: "ACTIVE",
+      statusLabel: "نشط (تجريبي) ✅",
+      badgeColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+      planName: "الاشتراك المجاني (تجريبي)",
+      daysRemaining: 30,
+      isExpired: false,
       isPending: false,
-      isActive: false,
+      isActive: true,
       currentSub: null,
     };
   }
+
 
   const now = Date.now();
   let daysRemaining = 0;

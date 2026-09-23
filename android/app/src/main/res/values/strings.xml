@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PenRx+</string>
+    <string name="title_activity_main">PenRx+</string>
+    <string name="package_name">com.penrx.app</string>
+    <string name="custom_url_scheme">com.penrx.app</string>
+</resources>

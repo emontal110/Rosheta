@@ -12,10 +12,13 @@ export interface CacheStorageInfo {
 
 const CLEANUP_TIMESTAMP_KEY = "rosheta_last_cache_cleanup";
 const ESSENTIAL_STORAGE_KEYS = [
+  "penrx_device_hardware_id",
+  "rosheta_bound_machine_id",
   "rosheta-subscriptions-storage",
   "rosheta-clinic-storage",
   "rosheta-prescriptions-storage",
 ];
+
 
 /**
  * Calculates current LocalStorage memory usage.
